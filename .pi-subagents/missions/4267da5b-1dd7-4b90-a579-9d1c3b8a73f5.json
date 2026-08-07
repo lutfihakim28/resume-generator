@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "4267da5b-1dd7-4b90-a579-9d1c3b8a73f5",
+  "title": "RESEARCH: choose the best client-side PDF library for the resume-editor project at /home/capsvelt...",
+  "goal": "RESEARCH: choose the best client-side PDF library for the resume-editor project at /home/capsvelte/Projects/resume-editor.\n\nCONTEXT — read these first:\n- README.md (client-only webapp; exports resume PDF as the product goal; EN or ID language chosen at export time).\n- docs/research/software-developer-template.md §5 ATS checklist — CRITICAL constraint: PDF must keep TEXT selectable/searchable (no rasterization), single column, real text only.\n- docs/plan/form-section-review-and-plan.md Parts 2+5: earlier decision was print-CSS/window.print() with a note \"revisit if a text-preserving lib (pdfmake) is needed later\". The live preview (ResumePreview.vue) renders the exact template layout in HTML; the form state (src/types/resume.ts) is the source of truth. JSON import/export already done.\n- Stack: Vue 3 rc, Vite 8, @nuxt/ui v4, TypeScript, Tailwind 4, bun as package manager. No SSR — pure browser app.\n\nEVALUATION CRITERIA (ranked):\n1. LIGHTWEIGHT (user priority): bundle size (min+gzip), dependency footprint, no heavy transitive deps.\n2. Text-preserving output (selectable text, ATS-safe) — rasterizing HTML (html2canvas-style) is DISQUALIFIED unless no alternative.\n3. Client-side only, no server/Puppeteer.\n4. Deterministic layout of a fixed A4 resume template (sections, wrapping, page breaks) — the app already knows the exact layout (template spec §3).\n5. Maintenance status, license, Vue/Vite compatibility (SSR not needed; worker threads OK), TypeScript types.\n\nCANDIDATES to evaluate (add others you know): pdfmake, jsPDF (text-only API, no html2canvas), pdf-lib, html2pdf.js, print-js, vue-html2pdf, others.\n\nIMPORTANT — TOOL LIMITATION (from a previous run): your runtime may have NO web tools (web_search/web_fetch absent). If that happens, DO NOT block asking for a decision — PROCEED from model knowledge immediately and clearly flag in the brief: \"sources from model knowledge, unverified this run\" + include exact verification queries (e.g. npm size checks, \"npm view <pkg> dist.unpackedSize\", bundlephobia URLs) at the end. Keep the brief concise and decisive.\n\nDELIVER a research brief (plain text, under ~200 lines):\n1. Comparison table: lib | min+gzip approx size | text-preserving? | layout model (declarative/imperative/low-level) | Vue/Vite fit | maintenance/license | verdict for THIS project.\n2. Clear RECOMMENDATION with rationale against the ranked criteria — the winner must be the best lightweight+text-preserving+low-effort fit for a deterministic A4 template.\n3. Bundle-size evidence or best-known estimates (flag if from memory).\n4. Verification checklist (commands/queries) to confirm sizes/latest versions.\n5. Do NOT modify files.",
+  "status": "failed",
+  "createdAt": "2026-08-07T03:43:30.451Z",
+  "updatedAt": "2026-08-07T03:46:05.607Z",
+  "runs": [
+    {
+      "runId": "e0c02202",
+      "mode": "single",
+      "agent": "researcher",
+      "status": "failed",
+      "startedAt": "2026-08-07T03:46:05.606Z",
+      "completedAt": "2026-08-07T03:46:05.606Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/e0c02202_researcher_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/e0c02202_researcher_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.\n\nOutput:\nResearch complete. Brief written to `/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/e0c02202/research.md` (markdownlint auto-fix applied — table formatting only; content verified on re-read).\n\n# Research: Client-Side PDF Library for resume-editor\n\n## Summary\n**Recommendation: jsPDF (text-only API, never `doc.html()`)** — ~98 KB gzip, real selectable/ATS-safe text, fully deterministic control over the fixed A4 template. pdfmake is the runner-up (declarative doc-definition but ~430–470 KB gzip, failing the #1 lightweight criterion). html2canvas-based tools (html2pdf.js, vue-html2pdf, jsPDF `html()`) are disqualified by the ATS gate in `docs/research/software-developer-template.md` §5. `window.print()` stays the 0 KB incumbent if the print-dialog UX is acceptable.\n\n## Key findings\n- **jsPDF wins on the ranked criteria**: lightest option that includes a text-wrap helper (`splitTextToSize`); active maintenance, MIT, official TS types, clean ESM for Vite 8; standard-14 Helvetica covers EN/ID Latin incl. `· – —` with zero font embedding.\n- **pdf-lib is lighter (~90 KB gzip, zero deps)** but has no wrap helper — hand-rolled measuring/wrapping adds effort and bug risk; slow release cadence (1.17.1, Nov 2021).\n- **Deterministic geometry maps 1:1** to template §3: A4, 14 mm margins → 516 pt content width, ~762 pt height; manual overflow check → `addPage()`, heading+first-line kept together, 2-page cap. More deterministic than print-CSS since r...",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Concrete findings with file paths and severity in brief §5 (e.g., HIGH: docs/research/software-developer-template.md §5 ATS gate disqualifies rasterizers; MEDIUM: docs/plan/form-section-review-and-plan.md Part 2 Decision 1 is the resolved decision point; MEDIUM: src/components/resume-preview/ResumePreview.vue has no pagination/print-break rules; LOW: layout-drift risk between ResumePreview.vue and the proposed src/utils/pdf-export.ts). Recommendation: jsPDF text-only API (~98 KB gzip, [MEM] estimate) with pdfmake runner-up and explicit disqualification rationale."
+        }
+      ],
+      "changedFiles": [
+        ".pi-subagents/artifacts/outputs/e0c02202/research.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "npm view jspdf version dist.unpackedSize (et al. — §4 checklist)",
+          "result": "not-run",
+          "summary": "No web or shell tools available this run; sizes are model-knowledge estimates flagged [MEM] and must be verified before committing"
+        }
+      ],
+      "validationOutput": [
+        "Read and grounded in: README.md, docs/plan/form-section-review-and-plan.md (Parts 1-5), docs/research/software-developer-template.md, package.json, src/components/resume-preview/ResumePreview.vue"
+      ],
+      "residualRisks": [
+        "All bundle sizes/versions unverified (no web tools this run) — run §4 checklist first",
+        "jsPDF 3.x ESM behavior with Vite 8 unverified",
+        "Helvetica (standard-14) vs preview font visual parity assumed acceptable; needs one eyeball check",
+        "No files modified besides the required artifact — implementation is a separate workstream"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Research artifact only: comparative evaluation of 8 PDF approaches, recommendation (jsPDF text-only), memory-flagged size evidence, verification checklist, findings with paths/severity",
+      "reviewFindings": [
+        "no blockers — recommendation jsPDF text-only API; blocker-level constraint documented: never use doc.html()/html2canvas paths (template §5)"
+      ],
+      "manualNotes": "Tooling note for parent: this runtime had no web_search/web_fetch/shell; the brief flags [MEM] on every estimate and ships an exact verification command list (§4) — run it before the export workstream commits."
+    }
+  }
+}

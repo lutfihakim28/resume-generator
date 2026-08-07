@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "id": "980dd47f-72cc-4fb2-bf60-688e7cadc09e",
+  "title": "PLAN THE FORM DELIVERY for the resume-editor project at /home/capsvelte/Projects/resume-editor.",
+  "goal": "PLAN THE FORM DELIVERY for the resume-editor project at /home/capsvelte/Projects/resume-editor.\n\nCONTEXT — prior reviewer output:\nAll inspection complete. Here is the review.\n\n## Review\n\n### 1. README as a spec — verdict\n\n**Correct/good:**\n- Clear feature inventory: one-page UI, two panels (left form + navigation, right preview + import/export), import-json-to-fill, export pdf+json, EN/ID dual language (README.md:8–26).\n- Explicitly defers the field set (\"will be provided later\", README.md:15) — and that gap is now resolved by `docs/research/software-developer-template.md`, so the deferred decision exists as an artifact.\n\n**Ambiguities (need oracle resolution):**\n- **Export mechanics unspecified** (README.md:19–21): \"the export will include the `resume.json`\" — is export one PDF, two downloads, or an archive? Is language chosen at export time (one PDF in EN *or* ID) or exported for both?\n- **Dual-language input UX unspecified** (README.md:23–24): \"User need fill both form\" — side-by-side EN/ID fields, per-language toggle, or per-section switch? Is ID content required or best-effort?\n- **Navigation mechanism unspecified** (README.md:12): tabs, accordion, or anchor menu for \"jump into specific information\"?\n- **Import contract unspecified**: schema/version of `resume.json`, behavior on invalid/missing data (reject vs. warn-and-fill).\n\n**Gaps/contradictions:**\n- README doesn't reference the template doc that defines the fields; the spec is split across two files and the template doc's `preset config sketch` (§3.6) implies a *template system*, while README says \"opiniated preset\" (singular) — scope ambiguity on single-preset vs. multi-preset.\n- No mention of the template's photo toggle / `educationPosition` options (template §2.3, §3.6) — must the v1 form expose them?\n- Trivial: \"opiniated\" typo (README.md:4).\n\n### 2. What \"the form section\" must deliver (per `dev-hybrid-id-no-photo` template)\n\nFrom `docs/research/software-developer-template.md` §3.3–3.5, the form must collect:\n\n- **Header**: full name; role title + top-3 stack keywords; phone, email, city; GitHub/LinkedIn/portfolio links (individually optional). (→ template §3.5 Header; sample §4.1 lines 1–4)\n- **Professional Summary**: 2–3 lines. (→ §3.5 Summary)\n- **Core Skills**: up to 4 groups, each group label + comma-separated skills (ATS-parseable, no skill bars). (→ §3.5 Core Skills)\n- **Work Experience** (repeatable, reverse-chronological): role title, company, city, start/end `MM/YYYY`, 3–5 bullets, per-role stack line. (→ §3.5 Work Experience)\n- **Projects** (repeatable): name + URL, one-line description, stack tags, one impact bullet. (→ §3.5 Projects)\n- **Education**: degree, major, university, city, year (GPA only fresh grads). (→ §3.5 Education)\n- **Certifications** (optional, repeatable): name, issuer, year. (→ §3.5)\n- **Languages** (optional): language + proficiency. (→ §3.5)\n- **EN+ID dual input**: every user-authored text field needs both variants — headings come from the template's EN/ID map (§3.3), but all content (summary, bullets, skill group labels, project descriptions) is translated per the sample skeletons (§4.1/§4.2).\n- **Import-to-fill**: importing `resume.json` must populate all of the above and be editable (README.md:16–17).\n- **Photo toggle** (default off) + `educationPosition` per §3.6 if options are in scope.\n\n### 3. Current code state (verified)\n\n- `src/App.vue`: stub as described — `<UApp><span>Halo</span></UApp>`, empty `<script setup lang=\"ts\">`. Fine as a smoke placeholder.\n- `src/main.ts`: correct wiring — `@nuxt/ui/vue-plugin` registered, mounts `#app`. Installed: Vue **3.6.0-rc.2**, @nuxt/ui **4.10.0**, Tailwind **4.3.3**, Vite **8.2.1**, Vitest **4.1.10**. `components.d.ts` resolves `UApp` correctly.\n- `src/__tests__/App.spec.ts`: one smoke test (stubs `UApp`, asserts existence) — **passes** (`vitest run`: 1/1). `vue-tsc --build` passes (exit 0).\n- **note, medium: `e2e/vue.spec.ts:6–8` is a stale Vue-scaffold test** expecting `h1` \"You did it!\" — the app renders \"Halo\"; this e2e will fail against the real app and must be rewritten.\n- **note, low: `vitest.config.ts:3`** imports `./vite.config` extensionless; Vite 8 warns this breaks under the upcoming native config loader.\n- **info**: directory is **not a git repository** — no history/diff to review.\n\n### 4. Feasibility / risk notes for the stack\n\n- **nuxt/ui v4 + Vue rc**: plugin setup, `UApp`, and type-check all work today. Risk: Vue `rc` overrides + nuxt/ui 4.x are moving targets; pin lockfile (`bun.lock`) and re-verify after upgrades. No validation library is installed — Nuxt UI v4's `UForm` schema validation (valibot/zod) must be verified or custom validation added.\n- **PDF export is the biggest open risk**: no PDF library in `package.json`, and \"client only webapp\" rules out server-side generation. Options: browser print (`window.print` + `@media print` CSS — preserves text/ATS safety, matches template's ATS requirements) vs. canvas-based (jsPDF/html2canvas — rasterizes text, breaks the template's ATS checklist §5). Needs an oracle decision.\n- **Dual-language doubles form complexity**: data model should nest variants (e.g., `{ en, id }` per field); decide required-vs-optional for ID early.\n- **Testing**: Vitest+jsdom+test-utils work; keep nuxt/ui components stubbed in unit tests (jsdom + teleports are flaky). Playwright config is ready (3 browsers, webServer on 5173/4173) but the one spec is stale.\n\n### 5. Missing decisions the oracle must make before implementation\n\n1. PDF export mechanism (print-CSS vs. library) and export packaging/filenames (README.md:19–21).\n2. Export-time language: single selected-language PDF, or both languages always produced?\n3. Form navigation UX (tabs/accordion/menu) and the EN+ID input presentation (side-by-side vs. toggle).\n4. `resume.json` schema: field naming, versioning, lang nesting; import validation strictness.\n5. Requiredness of ID content (README says \"need fill both\" — enforce or warn?).\n6. Scope of template options in v1: photo toggle / `educationPosition` included, or fixed preset defaults only.\n7. Single preset vs. template switcher (README \"opiniated preset\" vs. template doc's preset system).\n\n**No blockers found in the current stub state** — it is a clean, small base; the risks are pre-implementation decisions, not existing defects. I modified no files.\n\nAlso read for context: README.md, docs/research/indonesia-resume-layout.md, docs/research/software-developer-template.md (the target template \"dev-hybrid-id-no-photo\" whose fields the form must collect), and skim src/App.vue, src/__tests__/App.spec.ts, package.json.\n\nYour job: produce a concrete IMPLEMENTATION PLAN for the left-panel FORM section (\"Create resume through form\" feature): how the form will be delivered in this Vue 3 + @nuxt/ui v4 app.\n\nThe plan MUST decide and specify:\n1. Data model: the resume state shape (TypeScript types) covering the dev template fields (personal/contact incl. GitHub/LinkedIn links, summary EN+ID, skills groups EN+ID, experience entries EN+ID with dates, projects, education, certifications, languages, language toggle, showPhoto/educationPosition options). Both EN and ID content live in the same state.\n2. Component structure: which .vue components to create under src/components (e.g., form sections, field groups), how App.vue composes them, where the state store lives (Pinia? composable? — decide and justify given nuxt/ui v4 + Vue rc), and how form state connects to the future preview/export.\n3. Form UX: section-by-section field list (per the dev template order), EN/ID dual-input pattern (tabs? two fieldsets? decide), the navigation/jump mechanism for the form, validation rules (required vs optional), add/remove list items pattern (experience/projects entries).\n4. Import flow hooks: where imported resume.json merges into form state.\n5. Implementation order: concrete steps for the worker, with file paths, including which existing test expectations must be kept green (read src/__tests__/App.spec.ts).\n6. Risks & test plan: what to unit-test, any Vue rc / nuxt-ui v4 gotchas.\n\nDeliver the plan as plain text (keep under ~250 lines), decisive (no open questions; pick options). Do NOT modify files — plan only.",
+  "status": "completed",
+  "createdAt": "2026-08-07T02:38:31.278Z",
+  "updatedAt": "2026-08-07T02:40:39.927Z",
+  "runs": [
+    {
+      "runId": "c0a4e4f1",
+      "mode": "single",
+      "agent": "oracle",
+      "status": "completed",
+      "startedAt": "2026-08-07T02:40:39.927Z",
+      "completedAt": "2026-08-07T02:40:39.927Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c0a4e4f1_oracle_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c0a4e4f1_oracle_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "# Plan: Form Section Delivery — resume-editor (left panel)\n\n**Inherited context honored:** reviewer output (7 open decisions), `docs/research/software-developer-template.md` (\"dev-hybrid-id-no-photo\" field set), README one-page/two-panel spec. Verified myself: `App.vue` stub, `App.spec.ts` (UApp+RouterView stubs), `vite.config.ts` (`@nuxt/ui/vite` plugin, `@` alias), `components.d.ts` (own components NOT auto-registered → explicit imports), nuxt/ui composables auto-imported (`useScrollspy`, `useToast`), no Pinia/no validation lib in `package.json`.\n\n## 0. Decisions resolving the reviewer's 7 open questions\n\n1. **Export mechanism → print-CSS.** `window.print()` + `@media print` stylesheet on the preview. Rationale: client-only app, no PDF lib installed; jsPDF/html2canvas rasterizes text and violates the template's ATS checklist (§5). PDF = browser \"Save as PDF\"; JSON = separate `.json` download. v1 only; revisit if a text-preserving lib (pdfmake) is needed later.\n2. **Export language → chosen at export time.** PDF is EN *or* ID (user picks); JSON always contains both languages (state is language-complete).\n3. **Navigation UX → sticky anchor scrollspy sidebar.** One scrollable page (README \"one page UI\"), nav list jumps via `scrollIntoView({ behavior: 'smooth' })`, active highlight via nuxt/ui's auto-imported `useScrollspy`. No tabs/accordion.\n4. **EN/ID input → global segmented toggle** (`USegmented` EN|ID at form top) + amber \"ID incomplete\" dot per nav item + non-blocking alert. Rationale: compact (side-by-side doubles width), and the dots answer \"what's missing in the other language\".\n5. **ID requiredness → warn-only.** README \"need fill both\" is enforced as guidance, not a hard gate: ID-empty fields get a warning badge and a one-line alert; export never blocks on ID. EN-only hard-required: `name`.\n6. **Template options in v1 → both included.** `showPhoto` (default off) and `educationPosition` (default `bottom`) as an \"Options\" section in the form — cheap, stor...",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Plan resolves all 7 reviewer open questions with explicit decisions (print-CSS export, export-time language, scrollspy nav, global EN/ID toggle + incomplete badges, warn-only ID, both template options in v1, single preset) and gives concrete file paths with severity/role per artifact: src/types/resume.ts, src/composables/useResumeStore.ts, src/components/resume-form/* (10 components + sections.ts), src/utils/validation.ts, src/utils/resume-utils.ts, edits to src/App.vue, src/__tests__/App.spec.ts, e2e/vue.spec.ts; risks severity-labelled (nuxt/ui prop churn = medium, jsdom polyfills = low-medium, dep bumps = blocker-rule)"
+        }
+      ],
+      "changedFiles": [],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "cat src/__tests__/App.spec.ts && cat vite.config.ts && head -40 components.d.ts",
+          "result": "passed",
+          "summary": "Verified smoke test stubs (UApp, RouterView), @nuxt/ui/vite plugin + @ alias, own components not auto-registered"
+        },
+        {
+          "command": "ls src/ && head -30 auto-imports.d.ts && cat vitest.config.ts",
+          "result": "passed",
+          "summary": "Verified nuxt/ui composables auto-imported (useScrollspy, useToast), no components dir auto-registration, vitest merges vite config, jsdom env"
+        }
+      ],
+      "validationOutput": [
+        "Plan-only task: no code written or executed. Inspections above confirm reviewer's code-state claims (App.vue stub, UApp wiring, test stub strategy).",
+        "Type/UX decisions cross-checked against docs/research/software-developer-template.md §3.3-3.5 and sample skeletons §4.1/4.2 (EN/ID heading map, 4-group skills cap, MM/YYYY dates, Present sentinel)."
+      ],
+      "residualRisks": [
+        "nuxt/ui v4 exact prop names (UInput/USegmented/USwitch/UCheckbox/URadioGroup) unverified until worker inspects node_modules/@nuxt/ui; type-check + stubbed tests are the safety net",
+        "Vue rc lockfile must stay pinned; any dependency change during implementation invalidates the plan's assumptions",
+        "jsdom may need minimal ResizeObserver/matchMedia setupFile polyfills for nuxt/ui components in component tests",
+        "e2e/vue.spec.ts rewrite assertion must match whatever heading text the form renders (worker picks concrete selector)",
+        "vitest.config.ts extensionless vite.config import (reviewer low note) intentionally left out of scope",
+        "No user-testing data on Indonesian recruiter preference (parent research gap) — UI decisions follow platform-guidance consensus only"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "No diff — planning task only; zero files modified. Plan is the handoff artifact for the worker step.",
+      "reviewFindings": [
+        "no blockers in current stub state",
+        "medium: e2e/vue.spec.ts:6-8 stale 'You did it!' assertion — planned fix in step 8",
+        "low: vitest.config.ts:3 extensionless import — intentionally deferred",
+        "info: directory is not a git repository — no history/diff available"
+      ],
+      "manualNotes": "Handoff contract for the worker step: implement steps 1-9 exactly; keep existing App.spec assertion green by adding ResumeFormPanel:true stub; do not build preview/export (right panel placeholder only); do not bump dependencies; end with type-check + unit tests + lint passing. Acceptance of the worker's changes should be attested against this plan's file list."
+    }
+  }
+}

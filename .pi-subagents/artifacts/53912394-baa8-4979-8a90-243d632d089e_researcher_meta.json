@@ -1,0 +1,136 @@
+{
+  "runId": "53912394-baa8-4979-8a90-243d632d089e",
+  "agent": "researcher",
+  "task": "Research: What is the most popular resume layout / CV format in Indonesia? \n\nFocus areas:\n1. Most common resume layouts used in Indonesia (chronological, functional, combination/hybrid, ATS-friendly, etc.)\n2. Popular Indonesian job platforms' guidance on CV format (e.g., Jobstreet Indonesia, Indeed Indonesia, Kalibrr, Glints, LinkedIn Indonesia)\n3. Design preferences specific to Indonesia (colors, photos, length — e.g., 1-page vs 2-page, whether a photo is expected)\n4. ATS compatibility considerations relevant in Indonesia\n5. Any data on what recruiters in Indonesia prefer (e.g., surveys, articles from Indonesian HR/recruitment blogs)\n\nDeliver a concise, well-sourced research brief (with links) summarizing the findings. If data is scarce, say so explicitly and provide the best available evidence.\n\n---\n**Output:**\nWrite your findings to exactly this path: /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/53912394-baa8-4979-8a90-243d632d089e/research.md\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.\n\n## Acceptance Contract\nAcceptance level: attested\nCompletion is not accepted from prose alone. End with a structured acceptance report.\n\nCriteria:\n- criterion-1: Return concrete findings with file paths and severity when applicable\n\nRequired evidence: review-findings, residual-risks\n\nFinish with a fenced JSON block tagged `acceptance-report` in this shape:\nUse empty arrays when no items apply; array fields contain strings unless object entries are shown.\n`criteriaSatisfied[].status` must be exactly one of: satisfied, not-satisfied, not-applicable.\n`commandsRun[].result` must be exactly one of: passed, failed, not-run.\n`manualNotes` and `notes` are optional strings; an empty string means no note and does not satisfy `manual-notes` evidence.\n```acceptance-report\n{\n  \"criteriaSatisfied\": [\n    {\n      \"id\": \"criterion-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"specific proof\"\n    }\n  ],\n  \"changedFiles\": [\n    \"src/file.ts\"\n  ],\n  \"testsAddedOrUpdated\": [\n    \"test/file.test.ts\"\n  ],\n  \"commandsRun\": [\n    {\n      \"command\": \"command\",\n      \"result\": \"passed\",\n      \"summary\": \"short result\"\n    }\n  ],\n  \"validationOutput\": [\n    \"validation output or concise summary\"\n  ],\n  \"residualRisks\": [\n    \"none\"\n  ],\n  \"noStagedFiles\": true,\n  \"diffSummary\": \"short description of the diff\",\n  \"reviewFindings\": [\n    \"blocker: file.ts:12 - issue found, or no blockers\"\n  ],\n  \"manualNotes\": \"anything else the parent should know\"\n}\n```",
+  "exitCode": 1,
+  "model": "opencode/deepseek-v4-flash-free:max",
+  "attemptedModels": [
+    "opencode/deepseek-v4-flash-free:max"
+  ],
+  "modelAttempts": [
+    {
+      "model": "opencode/deepseek-v4-flash-free:max",
+      "success": false,
+      "exitCode": 1,
+      "error": "Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.",
+      "usage": {
+        "input": 12505,
+        "output": 12823,
+        "cacheRead": 44032,
+        "cacheWrite": 0,
+        "cost": 0,
+        "turns": 7
+      }
+    }
+  ],
+  "error": "Agent 'researcher' requested unavailable child tools: web_search, fetch_content, get_search_content.\nThe `tools` field is a strict allowlist; it does not load extension code.\nFor extension tools, add the provider path to `subagentOnlyExtensions` (child-only), `extensions`, or as a path-like entry in `tools`, while keeping each registered tool name in `tools`.\nFor MCP tools, verify the MCP adapter configuration and selected tool names. For builtin tools, verify the name against the installed Pi version.",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Research brief with concrete findings written to /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/53912394-baa8-4979-8a90-243d632d089e/research.md: layout ranking (chronological dominant, hybrid second, functional discouraged), platform guidance consensus table (Jobstreet/Indeed/Glints/Kalibrr/KitaLulus/CakeResume/LinkedIn), Indonesian-specific photo/length/color norms, ATS considerations, and data-scarcity statement. Severity tags included: photo omission = high, unverified URLs = medium, missing survey data = medium, shifting personal-data norms = low-medium. Review-findings and residual-risks evidence included below."
+        }
+      ],
+      "changedFiles": [
+        "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/53912394-baa8-4979-8a90-243d632d089e/research.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "web_search (attempted, multiple queries)",
+          "result": "failed",
+          "summary": "Tool not available in runtime (\"Tool web_search not found\"); no web_fetch/memory tools exposed. Supervisor approved knowledge-based brief with verification caveats (option a)."
+        },
+        {
+          "command": "write research.md to authoritative output path",
+          "result": "passed",
+          "summary": "Wrote 12,356 bytes; markdownlint auto-fixed 1 formatting issue; file re-read and content verified intact."
+        }
+      ],
+      "validationOutput": [
+        "File written to the exact authoritative path; re-read after auto-format confirmed all sections present (summary, verification caveat, 7 findings, platform table, verification queries, sources, gaps). Markdown renders cleanly."
+      ],
+      "residualRisks": [
+        "All cited URLs are well-known canonical domains, NOT live-verified this run (no web access); must be re-verified before publishing (verification queries included in the brief)",
+        "No primary public survey ranks CV layouts by Indonesian recruiter preference; findings rest on platform-guidance consensus (stated explicitly in the brief)",
+        "Photo and personal-data norms (agama/status pernikahan fields) are shifting; 2024-2025 practice needs fresh-source confirmation",
+        "TheLadders 6-second scan statistic is dated (2012) and cited only as widely-referenced supporting evidence"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Created research.md: knowledge-based research brief on Indonesian resume formats (chronological-dominant layout ranking, platform guidance, photo/length/color norms, ATS notes, template implications, verification checklist) with unverified-source flags per supervisor-approved approach.",
+      "reviewFindings": [
+        "medium: research.md - all source URLs unverified this run (no live web tools); mitigated with prominent caveat + exact re-verification search queries",
+        "medium: research.md - no primary survey data on recruiter layout preference in Indonesia; scarcity explicitly stated, consensus-based evidence labeled as such",
+        "low: research.md - religion/marital-status personal-data fields declining; flagged as shifting norm needing fresh confirmation",
+        "no blockers"
+      ],
+      "manualNotes": "Supervisor approved option (a): proceed from model knowledge with well-known source URLs, clearly flag as unverified-this-run, include how-to-verify queries. Runtime exposed no web_search/web_fetch/memory_search tools despite the researcher brief describing them. The brief's 'Implications for the resume-editor template' section is written to be directly actionable for template design (default preset, photo block handling, section order, length guard, EN/ID headings, PDF/DOCX export)."
+    }
+  },
+  "launchContractDigest": "2528997598163f9f90212debe7db1bdbb55b3bbc866402ade9d05d381b4d73a4",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:850e23191ecbb909"
+    ],
+    "configured": [],
+    "effective": [
+      "sha256:850e23191ecbb909"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "transcriptPath": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/53912394-baa8-4979-8a90-243d632d089e_researcher_transcript.jsonl",
+  "skills": [],
+  "timestamp": 1786069489971
+}

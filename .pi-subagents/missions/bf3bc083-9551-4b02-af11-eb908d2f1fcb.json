@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "bf3bc083-9551-4b02-af11-eb908d2f1fcb",
+  "title": "IMPLEMENT PDF EXPORT in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.",
+  "goal": "IMPLEMENT PDF EXPORT in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.\n\nPLAN (read it fully): /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c2415fce_oracle_0_output.md\n\nCRITICAL EXECUTION GUIDANCE (a previous worker timed out before writing any code — do NOT repeat that):\n1. The dependencies are ALREADY installed: jspdf@4.2.1 and pdfjs-dist@6.2.108 (package.json + bun.lock). Do NOT re-install. Do NOT research library APIs at length — a quick `ls node_modules/pdfjs-dist` / reading its package.json exports (2 minutes max) is all you need to find the right import path (look for legacy/build/pdf.mjs or build/pdf.mjs; pdfjs-dist 6.x may differ from the plan's assumption — adapt, don't rabbit-hole).\n2. TIME-BOX everything: implement the code FIRST (steps 3–6 of the plan), then write tests, then run verification. Any research/verification rabbit hole gets 2 minutes max; otherwise proceed with the plan's documented fallbacks (Plan B: vi.mock('jspdf') recording fake for unit tests; e2e fallback: assert download filename + %PDF magic bytes + size > 1000 if pdfjs text extraction fights Node 24 — note it as residual risk, don't block).\n3. Do not spend time on \"bundle sanity build\" unless everything else is done and green.\n\nTASKS per plan §6 (steps 3–10):\n3. src/utils/resume-utils.ts: add roleLine, educationLine, languageLabel, dateRange (all taking (entry, lang)), slugifyName. Refactor ResumePreview.vue and ImportExportBar.vue to import these (delete local copies — preview behavior must stay identical; its tests are the regression net). Note: ResumePreview currently calls its local roleLine/educationLine/languageLabel with no lang arg (uses reactive store lang) — the shared versions take (entry, lang); adapt call sites accordingly (pass store.activeLang).\n4. src/utils/download.ts: add downloadBlobFile(filename, blob, mime).\n5. src/utils/pdf-export.ts: buildPdf(resume, lang) → { data: Uint8Array, pages: number, truncated: boolean } — geometry, renderers, atomic page breaks (entries never split), 2-page cap with truncated flag, PDF metadata, NEVER doc.html(), NEVER doc.save() (use output('arraybuffer')). Photo: DEFERRED (text-only header).\n6. ImportExportBar.vue: \"Export PDF (EN)\" / \"Export PDF (ID)\" dynamic label button (data-testid=\"btn-export-pdf\"), exportPdf() with try/catch, toasts (success / truncated-warning / error), filename resume-<slug>-<lang>.pdf via slugifyName.\n7. Unit tests: new src/__tests__/pdf-export.spec.ts with // @vitest-environment node (real jsPDF; pdfjs-dist text extraction if it works in this Node — else Plan B), extend import-export-bar.spec.ts (+4 tests per plan §5).\n8. e2e: extend e2e/vue.spec.ts (+2 tests per plan §5 — export PDF download with filename + text extraction or fallback).\n9. Verify: bun run test:unit, bun run type-check, bun run lint, bunx playwright test --project=chromium. Keep ALL existing tests green (41 unit + 6 e2e).\n10. Update docs/plan/form-section-review-and-plan.md with Part 6 (implementation record, same pattern as Parts 4–5).\n\nConventions: script setup + TS, @nuxt/ui v4, data-testid, explicit imports. pi-lens reformatted some files — read fresh before editing. Do NOT add any dependency beyond jspdf + pdfjs-dist (already present). bun package manager.\n\nFinal response: files created/changed, verification results (test counts), deviations from plan, residual risks. Keep it under ~60 lines.",
+  "status": "completed",
+  "createdAt": "2026-08-07T04:19:16.918Z",
+  "updatedAt": "2026-08-07T04:31:21.533Z",
+  "runs": [
+    {
+      "runId": "267946be-20b4-4017-9280-52903f3f7c71",
+      "mode": "single",
+      "asyncDir": "/tmp/pi-subagents-uid-1000/async-subagent-runs/267946be-20b4-4017-9280-52903f3f7c71",
+      "status": "complete",
+      "startedAt": "2026-08-07T04:19:16.941Z",
+      "completedAt": "2026-08-07T04:31:21.533Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/267946be-20b4-4017-9280-52903f3f7c71/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/267946be-20b4-4017-9280-52903f3f7c71/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/267946be-20b4-4017-9280-52903f3f7c71_worker_output.md"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "worker:\nEverything is green. Final summary:\n\n## Implemented — PDF Export (jsPDF, text-only)\n\n**Chain:** researcher (brief: jsPDF ~98 KB gzip, text-preserving; pdfmake runner-up; html2canvas disqualified) → oracle (Part 6 plan) → worker (this implementation).\n\n### Files changed (7 modified, 2 new)\n- **new `src/utils/pdf-export.ts`** — `buildPdf(resume, lang)` → `{ data, pages, truncated }`: A4/14mm geometry, Helvetica standard-14 (no embedding), template §3 colors/typography, `splitTextToSize` wrapping, right-aligned dates, **atomic entries** (never split across pages), **2-page hard cap** → `truncated`, PDF metadata, `textWithLink` (try/catch), never `doc.html()`/`doc.save()`; photo deferred (documented)\n- **new `src/__tests__/pdf-export.spec.ts`** (5 tests, node env) — real jsPDF + **real pdfjs-dist text extraction** proving selectable/ATS-safe text: EN content/headings/`Mar 2022 – Present`/stack, ID (`Ringkasan Profil`, `Sekarang`), educationPosition-top ordering, 2-page truncation, empty resume\n- **mod** `resume-utils.ts` — shared `dateRange`/`roleLine`/`educationLine`/`languageLabel` (now `(entry, lang)`) + `slugifyName`; **mod** `ResumePreview.vue` — local copies deleted, imports shared (11 preview tests stayed green); **mod** `download.ts` — `downloadBlobFile`; **mod** `ImportExportBar.vue` — **`Export PDF (EN|ID)`** dynamic-label button, `resume-<slug>-<lang>.pdf`, success/truncated-warning/error toasts; **mod** bar spec +4 tests; **mod** `e2e/vue.spec.ts` +2 (PDF download: filename, `%PDF` magic, extracted text; ID variant); **mod** `docs/plan/...` Part 6 record\n\n### Verification\n- Unit **49/49** (was 41) · `vue-tsc` clean · lint clean · e2e chromium **8/8** (was 6) · `build-only` succeeds — jsPDF's html2canvas/dompurify/canvg are **lazy chunks**, fetched only if `doc.html()` is ever called (never in text-only export)\n\n### Gotchas fixed\npdfjs-dist 6.x: `loadingTask.destroy()` (proxy `.destroy()` removed), `isEvalSupported` gone from types · TS 5.7 typed arra"
+}

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "75ae4d81-e8fb-4ab3-ba2f-71100fc2c0fe",
+  "title": "IMPLEMENT PDF EXPORT in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.",
+  "goal": "IMPLEMENT PDF EXPORT in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.\n\nPLAN:\nAll context gathered. Producing the plan:\n\n# Plan: PDF Export (jsPDF) — resume-editor\n\n**Inherited decisions honored:** README (PDF export is the product goal; \"English or Indonesia as user selected\"); Part 2 decisions (export language chosen at export time — PDF is EN *or* ID; JSON always both; lenient import; template `dev-hybrid-id-no-photo`); Part 4 (live preview landed, sheet is pure HTML); Part 5 (JSON import/export done; `ImportExportBar.vue` holds export buttons; `downloadTextFile` util; slug/filename convention; toast pattern).\n\n**Deliberate revision of Part 2 Decision 1** (was: `window.print()` + print CSS, \"v1 only; revisit if a text-preserving lib is needed\"): the user explicitly commissioned a library search; the research brief picks **jsPDF text-only**, which is text-preserving (ATS-safe per template §5) and deterministic across browsers — so the export workstream now uses jsPDF instead of print-CSS. The `print:hidden` class on the bar stays harmless.\n\n## 1. Library, version, install\n\n- **Pick: jsPDF, text-only API** (`import { jsPDF } from 'jspdf'`). ~330 KB min / **~98 KB gzip** (research §1; `[MEM]` — verify with `npm view jspdf version dist.unpackedSize` before committing). MIT. Actively maintained.\n- Install: `bun add jspdf` (latest stable; if 3.x exists, confirm text-only API surface is unchanged: `new jsPDF({unit, format})`, `setFont/setFontSize/setTextColor/setDrawColor/setLineWidth`, `splitTextToSize`, `getTextWidth`, `text`, `textWithLink`, `addPage`, `getNumberOfPages`, `output('arraybuffer')`, `setProperties`).\n- **BLOCKER-LEVEL RULE: never call `doc.html()`** — that path rasterizes via html2canvas and violates template §5 (ATS text-in-image). Also never `doc.save()` (harder to test; use `output('arraybuffer')` + existing download util).\n- Runner-up (rejected): pdfmake (~430–470 KB gzip) — better layout ergonomics, fails the lightweight criterion. pdf-lib (~90 KB) — no wrap helper, most effort.\n- Fonts: **Helvetica (PDF standard-14, WinAnsi)** — no embedding, lightest possible; covers EN + ID Latin incl. `· – —`. Arial ≈ Helvetica metrics keep preview parity. Chinese/emoji would garble — accepted limitation (documented, template is EN/ID Latin).\n\n## 2. Architecture\n\n- **New pure module `src/utils/pdf-export.ts`** — UI-free, DOM-free, jsdom/Node-safe:\n  - `export interface PdfExportResult { data: Uint8Array; pages: number; truncated: boolean }`\n  - `export function buildPdf(resume: Resume, lang: Lang): PdfExportResult` — takes plain data (not the store) so it's trivially testable.\n  - Internals: geometry constants (below), section renderers, page-break logic, `doc.setProperties({ title: \\`${name}\\`, author: name || 'resume-editor', creator: 'resume-editor' })` (PDF metadata — free polish).\n- **Shared string builders — move to `src/utils/resume-utils.ts`** (single source of truth; the whitespace-trap lesson from Part 4 makes duplication forbidden):\n  - `roleLine(entry, lang)`, `educationLine(entry, lang)`, `languageLabel(entry, lang)`, `dateRange(entry, lang)`, and `slugifyName(name): string` (extracted from `ImportExportBar.exportFilename`; returns `''` for blank).\n  - `ResumePreview.vue` drops its local copies and imports these (behavior identical — its tests are the regression net).\n- **Section headings:** pdf-export imports `FORM_SECTIONS` from `src/components/resume-form/sections.ts` (pure TS data; preview already does this — same single source of truth for EN/ID headings).\n- Visibility predicates (`entryVisible`-style): tiny (<6 lines); each consumer keeps its own copy — strings are shared, predicates are not (low drift risk, avoids bloating resume-utils with shaping logic).\n- **Download:** add `downloadBlobFile(filename: string, blob: Blob, mime: string)` to `src/utils/download.ts` (same detached-anchor pattern); `downloadTextFile` stays for JSON. PDF path: `new Blob([result.data], { type: 'application/pdf' })`.\n\n## 3. UI (ImportExportBar)\n\n- **Button:** `UButton` \"Export PDF\" `data-testid=\"btn-export-pdf\"`, placed before \"Export JSON\".\n- **Export-time language — DECISION: export the store's `activeLang`, made explicit via a dynamic label** `Export PDF (EN)` / `Export PDF (ID)`. Justification: README \"as user selected\" = the app's existing global EN/ID segmented toggle (Part 2 decision 2 already made the language a per-export choice; adding a second toggle in the bar duplicates state and invites divergence — the form toggle is the single selector). One click, zero new UI state, filename encodes the language so both variants can coexist in Downloads.\n- **Filename:** `resume-<slug>-<lang>.pdf` (slug via shared `slugifyName`; blank name → `resume-en.pdf` / `resume-id.pdf`). Matches JSON convention (`resume-<slug>.json`).\n- **Loading state: none.** Generation is synchronous (<100 ms for 1–2 pages, main thread, no worker) — a spinner would be dead complexity (research §2.4).\n- **Toasts:** success → `Resume exported as PDF (EN|ID)` (color `success`); truncated → `Resume is longer than 2 pages — the PDF was truncated.` (color `warning`).\n- **Empty resume: export ALLOWED** (aligns with JSON decision — a blank version-1 resume is valid; no gate, consistent UX). Toast still says exported.\n\n## 4. Layout mapping (template §3 → jsPDF)\n\nGeometry: `new jsPDF({ unit: 'pt', format: 'a4' })` → page 595.28×841.89 pt; margins 14 mm = 39.7 pt; `X0 = 39.7`, `CONTENT_W = 595.28 − 79.4 ≈ 516`, `Y0 = 39.7`, `PAGE_BOTTOM = 841.89 − 39.7 ≈ 802`. Colors: primary `#1F2430`→(31,36,48), secondary `#4A5568`→(74,85,104), accent `#1E5AA8`→(30,90,168), rule `#D0D7DE`→(208,215,222). Fonts: `helvetica` normal/bold; sizes per §3.4. Line height: body 10.5 × 1.35 = **14.2 pt** manual advance (deterministic; no `setLineHeightFactor`).\n\nBlocks (all wrapped via `splitTextToSize(text, CONTENT_W)`):\n1. **Header** (no rule): name 19 pt bold primary; title 11.5 pt accent; contact 10 pt secondary (`phone · email · city`); links 10 pt secondary (GitHub · LinkedIn · portfolio). **Photo: DEFER (decision).** Rendering needs `doc.addImage` with a raster; user URLs are cross-origin → fetch/CORS/taint complexity; photo is default-OFF in this preset and the no-photo design has no placeholder hole (template §2.2). v1 PDF = text-only header. Document as known limitation; future work = fetch → blob → `addImage` JPEG with CORS caveat.\n2. **Section renderer** (shared shape): heading 12 pt bold primary at y; 0.6 pt accent rule via `setLineWidth(0.6)` + `line(X0, y+2, X0+CONTENT_W, y+2)`; gap 4 pt; body below. Section gap 10 pt before each heading.\n3. **Professional Summary**: 2–3 lines body text.\n4. **Core Skills**: per group, one line — label bold + `: ` + items normal (measure label, draw items after; if items exceed width, wrap remainder on following lines at the same indent).\n5. **Work Experience**: role line = `roleLine` bold 10.5 pt; dates 9.5 pt secondary right-aligned (`x = X0+CONTENT_W − getTextWidth(dates)`) on same baseline; bullets `• ` with 12 pt hanging indent (wrap at CONTENT_W−12); stack line 9.5 pt secondary. Entry gap 6 pt.\n6. **Projects**: name bold 10.5 pt (hyperlink via `textWithLink(name, x, y, { url })` when URL present — wrapped in try/catch, link failure must not break export); description 10.5 pt; impact 10.5 pt; stack 9.5 pt secondary.\n7. **Education**: `educationLine` 10.5 pt; year 9.5 pt secondary right-aligned. Position honors `options.educationPosition` — top = right after Summary, bottom = after Projects (same as preview).\n8. **Certifications**: bold name + normal ` — issuer | year` on one line (two-segment draw like skills).\n9. **Languages**: `languageLabel` list joined ` · `.\n\n**Page breaks:** before drawing any block, compute its full height (text pre-wrapped; entry height = role line + all wrapped bullets + stack + gaps). If `y + blockH > PAGE_BOTTOM` → `doc.addPage()`, `y = Y0`. **Atomicity: an experience/project/education entry never splits across pages** (whole-entry push; matches \"avoid splitting mid-bullet\", cost is acceptable whitespace). Heading+first line never separate (heading block includes its first content line height in the fit check).\n**2-page hard cap (template §3.1):** if content remains after page 2 is full → stop drawing, set `truncated: true`. No marker text. UI shows the warning toast.\n\n## 5. Tests\n\n- **Unit — new `src/__tests__/pdf-export.spec.ts`, `// @vitest-environment node`** (vitest default is jsdom; jsPDF text-only runs cleanly in Node, no canvas needed). Uses **real jsPDF + pdfjs-dist** (`getDocument({ data })` on `doc.output('arraybuffer')`, legacy build, main-thread) to assert extracted text — proves selectable text (ATS). Cases: (a) typical mid-level resume → 1 page, contains name, headings, `Mar 2022 – Present`, stack line; (b) ID lang → `Ringkasan Profil`, `Sekarang`, filename label logic separately; (c) educationPosition `top` → Education text precedes Core Skills text in extraction order; (d) content stuffed past 2 pages → `pages === 2`, `truncated === true`; (e) empty resume → 1 page, no throw. Plan B if jsPDF constructor misbehaves in Node: `vi.mock('jspdf')` with a recording fake (assert text calls + page breaks) — documented fallback, not the default.\n- **Unit — extend `src/__tests__/import-export-bar.spec.ts`** (+4 tests): mock `@/utils/pdf-export` and `@/utils/download`; assert button label follows `store.activeLang` (`Export PDF (EN)`→`(ID)`); click calls `buildPdf(resume, activeLang)` and `downloadBlobFile` with `resume-<slug>-<lang>.pdf`; `truncated: true` → warning toast; `pdf-export` error → error toast (defensive try/catch in the bar).\n- **e2e — extend `e2e/vue.spec.ts`** (+2 tests, chromium): (a) fill name/summary → click `btn-export-pdf` → `page.waitForEvent('download')` → assert `suggestedFilename() === 'resume-budi-santoso-en.pdf'`, read `download.path()` via fs, extract text with pdfjs-dist (legacy build, no worker), assert `Budi Santoso` + `Professional Summary` present; (b) switch ID tab → export → filename `-id.pdf`, text contains `Ringkasan Profil`. Existing 6 e2e stay green.\n- **pdfjs-dist as devDependency** (`bun add -d pdfjs-dist`): used only in unit (node env) + e2e; never shipped to the client bundle. Scope justified: it is the only practical way to assert selectable-text/ATS property; ~3.5 MB devDep, no runtime cost.\n- Keep existing 41 unit + 6 e2e green (→ ~48 unit, 8 e2e).\n\n## 6. Implementation steps (ordered, for worker)\n\n1. `bun add jspdf` → record resolved version; run `npm view jspdf version dist.unpackedSize` to sanity-check the [MEM] size claim.\n2. `bun add -d pdfjs-dist`.\n3. `src/utils/resume-utils.ts`: add `roleLine`, `educationLine`, `languageLabel`, `dateRange` (all take `(entry, lang)`), `slugifyName`; update `ResumePreview.vue` and `ImportExportBar.vue` to import them (delete local copies; `exportFilename` uses `slugifyName`).\n4. `src/utils/download.ts`: add `downloadBlobFile(filename, blob, mime)`.\n5. `src/utils/pdf-export.ts`: geometry constants + renderers + page-break/atomicity + 2-page cap + metadata, per §4. No store import; no DOM.\n6. `ImportExportBar.vue`: Export PDF button (dynamic label, `data-testid=\"btn-export-pdf\"`), `exportPdf()` with try/catch → toasts (success / truncated-warning / error).\n7. Unit tests (§5) — new spec + extended bar spec.\n8. e2e tests (§5).\n9. Verify: `bun run test:unit` (48) · `bun run type-check` · `bun run lint` · `bunx playwright test --project=chromium` (8) · optionally `bun run build` (bundle sanity: confirm jsPDF deps tree-shake).\n10. Update `docs/plan/form-section-review-and-plan.md` → Part 6 implementation record (same pattern as Parts 4–5).\n\n## 7. Risks / gotchas\n\n- **jsPDF + Vite 8 ESM:** jspdf pulls optional deps (dompurify, canvg, fflate, core-js) — tree-shaken for text-only; verify with a production build before declaring done. jsPDF 3.x API drift unverified (`[MEM]`) — worker must confirm the §1 API surface on the installed version.\n- **jsdom:** never `doc.html()` anywhere (template §5 + jsdom has no canvas). pdf-export unit spec runs in Node env to sidestep jsdom quirks entirely.\n- **pdfjs-dist in Node/Playwright:** use `pdfjs-dist/legacy/build/pdf.mjs` (main-thread fake worker), `isEvalSupported: false`, `disableFontFace: true` to avoid warnings; `getDocument({ data })` with Node Buffer→Uint8Array.\n- **Charset:** WinAnsi limitation — non-Latin (CJK/emoji) renders as garbage. Accepted; note in code comment + Part 6 doc.\n- **Links:** `textWithLink` wrapped in try/catch; failure degrades to plain text, never aborts export.\n- **Font parity:** Helvetica ≈ Arial metrics; one eyeball check against the preview recommended (manual, not automated).\n- **Truncation silence:** `truncated` flag + warning toast is the only signal; template caps at 2 pages anyway (typical dev resume fits).\n- **Filenames:** ASCII-only (slug) → Playwright `suggestedFilename` safe.\n\nContext files: README.md, docs/research/software-developer-template.md, docs/plan/form-section-review-and-plan.md, src/types/resume.ts, src/composables/useResumeStore.ts, src/components/resume-preview/ResumePreview.vue + PreviewSection.vue + ImportExportBar.vue, src/utils/download.ts, resume-utils.ts, validation.ts, existing tests. pi-lens reformatted some files — read fresh before editing. bun package manager.\n\nRequirements:\n1. Add ONLY the dependency the plan specifies (jsPDF + any devDependency the plan explicitly allows, e.g. pdfjs-dist for e2e text assertions). No other new deps.\n2. Implement src/utils/pdf-export.ts (or per plan) + UI wiring (Export PDF button, export-time language selection, toasts, filename) exactly per plan.\n3. Unit tests per plan + e2e additions (Playwright chromium, expectDownload + text extraction if planned). Keep ALL existing tests green (41 unit, 6 e2e).\n4. Project conventions: script setup + TS, @nuxt/ui v4, data-testid, explicit imports.\n5. Verify: bun run test:unit, bun run type-check, bun run lint, bunx playwright test --project=chromium — fix everything you introduce. If feasible, report the new dependency's installed size contribution (bun pm / node_modules size or vite build output).\n6. Final response: files created/changed, verification results, bundle-size note, deviations from plan, residual risks.",
+  "status": "failed",
+  "createdAt": "2026-08-07T03:48:37.468Z",
+  "updatedAt": "2026-08-07T04:18:37.533Z",
+  "runs": [
+    {
+      "runId": "246f5904",
+      "mode": "single",
+      "agent": "worker",
+      "status": "failed",
+      "startedAt": "2026-08-07T04:18:37.533Z",
+      "completedAt": "2026-08-07T04:18:37.533Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/246f5904_worker_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/246f5904_worker_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "Subagent timed out after 1800000ms.\n\nOutput:\nSubagent timed out after 1800000ms.\n\nPartial output before timeout:\njsPDF 4.2.1 API matches the plan exactly. Now checking pdfjs-dist's legacy build for Node:\n\nOutput artifact: /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/246f5904_worker_0_output.md",
+  "acceptance": {
+    "status": "rejected",
+    "evidenceStatus": "rejected",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": false,
+      "inferredReason": [
+        "write-capable worker/task"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Implement the requested change without widening scope",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "write-capable worker/task"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Implement the requested change without widening scope",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "timeout",
+        "status": "failed",
+        "message": "Acceptance was not evaluated because the subagent timed out."
+      }
+    ],
+    "verifyRuns": []
+  }
+}

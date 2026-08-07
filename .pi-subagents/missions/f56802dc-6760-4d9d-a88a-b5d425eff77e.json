@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "f56802dc-6760-4d9d-a88a-b5d425eff77e",
+  "title": "Research: What is the most popular resume layout / CV format in Indonesia?",
+  "goal": "Research: What is the most popular resume layout / CV format in Indonesia? \n\nFocus areas:\n1. Most common resume layouts used in Indonesia (chronological, functional, combination/hybrid, ATS-friendly, etc.)\n2. Popular Indonesian job platforms' guidance on CV format (e.g., Jobstreet Indonesia, Indeed Indonesia, Kalibrr, Glints, LinkedIn Indonesia)\n3. Design preferences specific to Indonesia (colors, photos, length — e.g., 1-page vs 2-page, whether a photo is expected)\n4. ATS compatibility considerations relevant in Indonesia\n5. Any data on what recruiters in Indonesia prefer (e.g., surveys, articles from Indonesian HR/recruitment blogs)\n\nDeliver a concise, well-sourced research brief (with links) summarizing the findings. If data is scarce, say so explicitly and provide the best available evidence.",
+  "status": "failed",
+  "createdAt": "2026-08-07T02:22:15.524Z",
+  "updatedAt": "2026-08-07T02:24:49.980Z",
+  "runs": [
+    {
+      "runId": "53912394-baa8-4979-8a90-243d632d089e",
+      "mode": "single",
+      "asyncDir": "/tmp/pi-subagents-uid-1000/async-subagent-runs/53912394-baa8-4979-8a90-243d632d089e",
+      "status": "failed",
+      "startedAt": "2026-08-07T02:22:15.550Z",
+      "completedAt": "2026-08-07T02:24:49.980Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/53912394-baa8-4979-8a90-243d632d089e/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/53912394-baa8-4979-8a90-243d632d089e/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/53912394-baa8-4979-8a90-243d632d089e_researcher_output.md"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "researcher:\nThe deliverable is written and verified on disk (markdownlint's auto-fix only normalized table/URL formatting; content intact). Final response below.\n\n# Research: Most Popular Resume Layout / CV Format in Indonesia\n\n**Deliverable:** `/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/53912394-baa8-4979-8a90-243d632d089e/research.md` (full brief with citations, platform table, and verification checklist).\n\n**Headline answer:** Reverse-chronological is the dominant CV layout in Indonesia (combination/hybrid second, functional discouraged); a formal 3x4 photo is the biggest local differentiator vs. Western norms; 1 page (fresh grads) to 2 pages (experienced) is the accepted length; design is conservative (white/black/navy + one muted accent); ATS-friendly single-column formatting is now standard platform advice, but the local compromise is \"photo + simple ATS-safe layout\" since many SMEs still review manually. Public survey data on recruiter layout preference is scarce — the consensus rests on platform guidance (Jobstreet/SEEK, Indeed ID, Glints, Kalibrr, KitaLulus, CakeResume), not measurement.\n\n**Critical caveat:** no live web access existed in this runtime (web_search/web_fetch tools absent — confirmed by tool-not-found error), so all cited URLs are well-known canonical pages that remain **unverified this run**; the brief includes exact search queries to re-verify before the links are used in the product."
+}

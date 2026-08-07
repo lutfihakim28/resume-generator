@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "id": "4e946f75-89c2-4b82-b09f-df76dca6b0c4",
+  "title": "IMPLEMENT THE FORM SECTION in /home/capsvelte/Projects/resume-editor following the oracle plan ex...",
+  "goal": "IMPLEMENT THE FORM SECTION in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.\n\nPLAN:\n# Plan: Form Section Delivery — resume-editor (left panel)\n\n**Inherited context honored:** reviewer output (7 open decisions), `docs/research/software-developer-template.md` (\"dev-hybrid-id-no-photo\" field set), README one-page/two-panel spec. Verified myself: `App.vue` stub, `App.spec.ts` (UApp+RouterView stubs), `vite.config.ts` (`@nuxt/ui/vite` plugin, `@` alias), `components.d.ts` (own components NOT auto-registered → explicit imports), nuxt/ui composables auto-imported (`useScrollspy`, `useToast`), no Pinia/no validation lib in `package.json`.\n\n## 0. Decisions resolving the reviewer's 7 open questions\n\n1. **Export mechanism → print-CSS.** `window.print()` + `@media print` stylesheet on the preview. Rationale: client-only app, no PDF lib installed; jsPDF/html2canvas rasterizes text and violates the template's ATS checklist (§5). PDF = browser \"Save as PDF\"; JSON = separate `.json` download. v1 only; revisit if a text-preserving lib (pdfmake) is needed later.\n2. **Export language → chosen at export time.** PDF is EN *or* ID (user picks); JSON always contains both languages (state is language-complete).\n3. **Navigation UX → sticky anchor scrollspy sidebar.** One scrollable page (README \"one page UI\"), nav list jumps via `scrollIntoView({ behavior: 'smooth' })`, active highlight via nuxt/ui's auto-imported `useScrollspy`. No tabs/accordion.\n4. **EN/ID input → global segmented toggle** (`USegmented` EN|ID at form top) + amber \"ID incomplete\" dot per nav item + non-blocking alert. Rationale: compact (side-by-side doubles width), and the dots answer \"what's missing in the other language\".\n5. **ID requiredness → warn-only.** README \"need fill both\" is enforced as guidance, not a hard gate: ID-empty fields get a warning badge and a one-line alert; export never blocks on ID. EN-only hard-required: `name`.\n6. **Template options in v1 → both included.** `showPhoto` (default off) and `educationPosition` (default `bottom`) as an \"Options\" section in the form — cheap, store-backed, feeds future preview preset.\n7. **Preset scope → single fixed preset** (`dev-hybrid-id-no-photo`), no switcher. Matches README's \"opiniated preset\" (singular); the template doc's preset *system* is future work.\n\n## 1. Data model — `src/types/resume.ts` (new)\n\n**Nesting rule (decisive):** free-text prose → `LangText { en, id }`; proper nouns/facts (name, company, city, dates, URLs, university, cert names, stack tags) → single string. Sample skeletons §4.1/§4.2 confirm degree/major differ by language → `LangText`.\n\n```ts\nexport type Lang = 'en' | 'id'\nexport interface LangText { en: string; id: string }\n\nexport interface PersonalInfo {\n  name: string; title: LangText; phone: string; email: string; city: string\n  github: string; linkedin: string; portfolio: string\n}\nexport interface SkillGroup { id: string; label: LangText; items: LangText }      // items = comma-separated, ATS-safe\nexport interface ExperienceEntry {\n  id: string; role: LangText; company: string; city: string\n  start: string; end: string | null          // \"MM/YYYY\"; null = Present/Sekarang\n  bullets: LangText[]; stack: string         // 3–5 bullets; stack = shared tags\n}\nexport interface ProjectEntry { id: string; name: string; url: string; description: LangText; stack: string; impact: LangText }\nexport interface EducationEntry { id: string; degree: LangText; major: LangText; university: string; city: string; year: string; gpa?: string }\nexport interface CertificationEntry { id: string; name: string; issuer: string; year: string }\nexport interface LanguageEntry { id: string; name: string; proficiency: LangText }\n\nexport interface Resume {\n  version: 1\n  personal: PersonalInfo\n  summary: LangText\n  skills: SkillGroup[]          // UI caps at 4\n  experience: ExperienceEntry[]\n  projects: ProjectEntry[]\n  education: EducationEntry[]\n  certifications: CertificationEntry[]\n  languages: LanguageEntry[]\n  options: { showPhoto: boolean; educationPosition: 'top' | 'bottom' }\n}\n```\n\nSame file exports:\n- `createEmptyResume(): Resume` — defaults (`showPhoto: false`, `educationPosition: 'bottom'`, empty arrays).\n- `mergeResume(base: Resume, raw: unknown): Resume` — deep-merge for import: known arrays replaced wholesale when valid, missing keys fall back to base, **unknown keys dropped** (avoids stale-UI bugs; comment this).\n- `isValidResumeJson(raw: unknown): boolean` — `version === 1` + structural shape checks (personal object, arrays, string fields).\n- `uid(): string` — `crypto.randomUUID()` with counter fallback.\n\n## 2. State store — `src/composables/useResumeStore.ts` (new)\n\n**Decision: plain composable singleton, NOT Pinia.** `package.json` has no Pinia; adding a dep for a one-page app against Vue rc + nuxt/ui v4 churn is unjustified. Idiomatic and testable:\n\n```ts\nconst state = reactive({ resume: createEmptyResume(), activeLang: 'en' as Lang })\nexport function useResumeStore() {\n  // returns: resume, activeLang (readonly), setActiveLang(lang),\n  // importJson(raw: unknown): { ok: true } | { ok: false; errors: string[] },\n  // exportJson(): string (pretty, 2-space, includes version),\n  // addSkillGroup/removeSkillGroup (cap 4), addExperience/removeExperience,\n  // addProject/removeProject, addEducation/removeEducation,\n  // addCertification/removeCertification, addLanguage/removeLanguage,\n  // resetStore()  ← for tests\n}\n```\n\n`importJson`: `JSON.parse` (catch → `{ok:false, errors:['Invalid JSON']}`) → `isValidResumeJson` → `mergeResume` → assign. Version ≠ 1 → `'Unsupported resume.json version'`. Store is the single hook for the future preview/export (right panel reads `resume` + `activeLang` — already sufficient for print-CSS export).\n\n## 3. Component structure — `src/components/resume-form/` (new)\n\nOwn components are **not** auto-registered (verified `components.d.ts`) → explicit imports with `@/` alias everywhere.\n\n| File | Role |\n|---|---|\n| `ResumeFormPanel.vue` | Left panel: global `USegmented` EN\\|ID, incomplete-ID `UAlert`, layout `flex` = `FormNav` (sticky, w-48) + scrollable sections column |\n| `FormNav.vue` | Anchor list from `FORM_SECTIONS`; `useScrollspy` (auto-imported) for active state; click → smooth scroll; amber dot per incomplete section |\n| `sections.ts` | `FORM_SECTIONS: { id, key, headingEn, headingId }[]` (template §3.3 order) + `SECTION_FIELDS: Record<string, (r: Resume) => LangText[]>` (drives incomplete-dots) |\n| `PersonalSection.vue` | name, title (LangText), phone, email, city, github, linkedin, portfolio |\n| `SummarySection.vue` | `UTextarea` summary (LangText) |\n| `SkillsSection.vue` | SkillGroup list; add disabled at 4; remove per group; label + items textareas (LangText) |\n| `ExperienceSection.vue` + `ExperienceEntryForm.vue` | role (LangText), company, city, start/end `MM/YYYY` + `UCheckbox` \"Present\" (end→null, disabled), 3–5 bullets (LangText) with add/remove, stack line |\n| `ProjectsSection.vue` + `ProjectEntryForm.vue` | name, url, description (LangText), stack, impact (LangText) |\n| `EducationSection.vue` + `EducationEntryForm.vue` | degree/major (LangText), university, city, year, gpa (optional) |\n| `CertificationsSection.vue` + `CertificationEntryForm.vue` | name, issuer, year |\n| `LanguagesSection.vue` + `LanguageEntryForm.vue` | name, proficiency (LangText) |\n| `OptionsSection.vue` | `USwitch` photo (off default) + `URadioGroup`/`USegmented` educationPosition |\n\n**One binding rule:** every LangText input binds `v-model=\"value[store.activeLang]\"` — no per-field wrapper components. Add/remove pattern everywhere: `UButton variant=\"soft\" icon=\"i-lucide-plus\"` appends `uid()` entry; ghost icon button removes immediately (v1, no undo; `useToast` \"removed\" confirm).\n\n**`App.vue` (edit):** `<UApp><div class=\"grid min-h-screen grid-cols-2\"><ResumeFormPanel /><div class=\"border-l\">Preview placeholder</div></div></UApp>` — right panel stays a labeled placeholder (preview/export is the next workstream, not this task).\n\n## 4. Form UX details\n\n- **Validation** (`src/utils/validation.ts`, new — hand-rolled, no new dep): required = `name` non-empty (shown via `UField` error); soft warnings (non-blocking): email regex when filled, date regex `/^(0[1-9]|1[0-2])\\/\\d{4}$/` when filled, `end < start` warning, \"no phone AND no email\" hint.\n- **Incomplete-ID detection** (`src/utils/resume-utils.ts`, new): `isIncomplete(lt: LangText)` → `lt.id.trim() === ''`; `SECTION_FIELDS` maps sections → fields; `FormNav` dots + top alert \"N ID fields still empty — switch to ID to fill\".\n- Nav order = template §3.3: Personal → Summary → Skills → Experience → Projects → Education → Certifications → Languages → Options.\n\n## 5. Implementation order (worker steps, all green at the end)\n\n1. `src/types/resume.ts` — types + factory + merge + validator + `uid`.\n2. `src/utils/resume-utils.ts`, `src/utils/validation.ts`.\n3. `src/composables/useResumeStore.ts`.\n4. `src/components/resume-form/sections.ts`.\n5. Section components bottom-up (Personal → Summary → Skills → Experience → Projects → Education → Certifications → Languages → Options).\n6. `FormNav.vue`, `ResumeFormPanel.vue`; wire `App.vue` with right placeholder.\n7. **Tests:** extend `src/__tests__/App.spec.ts` — keep the existing assertion, add `ResumeFormPanel: true` stub (jsdom + real nuxt/ui inputs are flaky per review; UApp stub stays). New: `src/__tests__/resume-store.spec.ts` (factory defaults, `importJson` ok/invalid-json/unsupported-version, add/remove capping at 4 skill groups, `resetStore`); `src/__tests__/resume-form.spec.ts` (mount panel with nuxt/ui stubs; add/remove experience entry; `activeLang` switch binds the right variant; name-required error shows).\n8. Fix stale `e2e/vue.spec.ts` (reviewer: medium) — replace \"You did it!\" `h1` assertion with form presence (e.g. heading \"Personal\" / nav item \"Work Experience\").\n9. Verify: `bun run type-check`, `bun run test:unit`, `bun run lint` all pass. Do NOT bump any dependency.\n\n## 6. Risks & test plan\n\n- **nuxt/ui v4 prop names unverified by me** — worker must check component APIs in `node_modules/@nuxt/ui` before heavy use; `vue-tsc` catches prop errors; tests keep nuxt/ui stubbed so prop churn won't break them.\n- **Vue rc + nuxt/ui moving targets** — lockfile pinned; no dep bumps this task.\n- **jsdom gaps** (ResizeObserver/matchMedia in nuxt/ui) — if needed, add `test.setupFiles` in `vitest.config.ts` with minimal polyfills; keep vitest config edit minimal (reviewer's extensionless-import note is low/out-of-scope — leave, note as residual).\n- **Reactive singleton leaks across tests** — `resetStore()` in `beforeEach`.\n- **Import leniency tradeoff** — unknown keys dropped by design; documented in `mergeResume` comment.\n- **Print-CSS export** decisions are preview-panel concerns — form unaffected; worker must NOT build preview/export.\n\nAlso read README.md and the research docs in docs/research/ for context.\n\nRequirements for the implementation:\n1. Create the data model (types) and state (as the plan decides), all form components under src/components/, and wire them into src/App.vue's left panel. The right panel preview/export is OUT OF SCOPE — but structure the state so preview/export can consume it later.\n2. Follow the plan's section order and EN/ID dual-input pattern from docs/research/software-developer-template.md.\n3. Keep existing tests green (read src/__tests__/App.spec.ts first; adjust/extend tests if the plan requires it, and ADD tests for new form behavior — at minimum: form renders, fields update state, add/remove list item works, EN/ID toggling).\n4. Respect project conventions: Vue 3 script setup + TS, @nuxt/ui v4 components (UInput, UTextarea, USelect, UButton, etc.), Tailwind 4. Run the project's tooling to verify: pnpm type-check, pnpm test:unit, pnpm lint (eslint/oxlint) — fix everything you introduce. Do not add new dependencies unless the plan explicitly requires it (prefer Pinia only if the plan says so; a plain composable may suffice).\n5. Final response: concise summary of what was implemented (files created/changed), test results, and any deviations from the plan.",
+  "status": "completed",
+  "createdAt": "2026-08-07T02:40:39.957Z",
+  "updatedAt": "2026-08-07T03:09:48.424Z",
+  "runs": [
+    {
+      "runId": "f8dbea87",
+      "mode": "single",
+      "agent": "worker",
+      "status": "completed",
+      "startedAt": "2026-08-07T03:09:48.418Z",
+      "completedAt": "2026-08-07T03:09:48.418Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/f8dbea87_worker_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/f8dbea87_worker_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "Everything is green. Writing the acceptance report:",
+  "acceptance": {
+    "status": "checked",
+    "evidenceStatus": "checked",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": false,
+      "inferredReason": [
+        "write-capable worker/task"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Implement the requested change without widening scope",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "write-capable worker/task"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Implement the requested change without widening scope",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "criterion:criterion-1",
+        "status": "passed",
+        "message": "Required criterion 'criterion-1' satisfied."
+      },
+      {
+        "id": "evidence:changed-files",
+        "status": "passed",
+        "message": "changed-files evidence present."
+      },
+      {
+        "id": "evidence:tests-added",
+        "status": "passed",
+        "message": "tests-added evidence present."
+      },
+      {
+        "id": "evidence:commands-run",
+        "status": "passed",
+        "message": "commands-run evidence present."
+      },
+      {
+        "id": "evidence:residual-risks",
+        "status": "passed",
+        "message": "residual-risks evidence present."
+      },
+      {
+        "id": "evidence:no-staged-files",
+        "status": "passed",
+        "message": "no-staged-files evidence present."
+      },
+      {
+        "id": "no-staged-files",
+        "status": "not-applicable",
+        "message": "git status unavailable; no staged-files check skipped"
+      }
+    ],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Implemented exactly the oracle plan's form-section scope: types + store + 13 form components under src/components/resume-form/ + App.vue left-panel wiring. Right panel is a labeled placeholder (preview/export explicitly NOT built). No new dependencies added (plain composable store, hand-rolled validation, useToast/useScrollspy from already-installed @nuxt/ui/composables)."
+        }
+      ],
+      "changedFiles": [
+        "src/types/resume.ts",
+        "src/utils/resume-utils.ts",
+        "src/utils/validation.ts",
+        "src/composables/useResumeStore.ts",
+        "src/composables/useRemoveNotify.ts",
+        "src/components/resume-form/sections.ts",
+        "src/components/resume-form/ResumeFormPanel.vue",
+        "src/components/resume-form/FormNav.vue",
+        "src/components/resume-form/PersonalSection.vue",
+        "src/components/resume-form/SummarySection.vue",
+        "src/components/resume-form/SkillsSection.vue",
+        "src/components/resume-form/ExperienceSection.vue",
+        "src/components/resume-form/ExperienceEntryForm.vue",
+        "src/components/resume-form/ProjectsSection.vue",
+        "src/components/resume-form/ProjectEntryForm.vue",
+        "src/components/resume-form/EducationSection.vue",
+        "src/components/resume-form/EducationEntryForm.vue",
+        "src/components/resume-form/CertificationsSection.vue",
+        "src/components/resume-form/CertificationEntryForm.vue",
+        "src/components/resume-form/LanguagesSection.vue",
+        "src/components/resume-form/LanguageEntryForm.vue",
+        "src/components/resume-form/OptionsSection.vue",
+        "src/App.vue",
+        "src/__tests__/App.spec.ts",
+        "src/__tests__/resume-store.spec.ts",
+        "src/__tests__/resume-form.spec.ts",
+        "e2e/vue.spec.ts",
+        "env.d.ts"
+      ],
+      "testsAddedOrUpdated": [
+        "src/__tests__/resume-store.spec.ts (new, 8 tests)",
+        "src/__tests__/resume-form.spec.ts (new, 8 tests)",
+        "src/__tests__/App.spec.ts (updated: ResumeFormPanel stub)",
+        "e2e/vue.spec.ts (updated: form presence + real ID-tab toggle test)"
+      ],
+      "commandsRun": [
+        {
+          "command": "bun run test:unit",
+          "result": "passed",
+          "summary": "3 files, 18/18 tests passed"
+        },
+        {
+          "command": "bun run type-check",
+          "result": "passed",
+          "summary": "vue-tsc --build clean (app + vitest projects)"
+        },
+        {
+          "command": "bun run lint",
+          "result": "passed",
+          "summary": "oxlint + eslint --fix clean, exit 0"
+        },
+        {
+          "command": "bunx playwright test --project=chromium",
+          "result": "passed",
+          "summary": "2/2 e2e tests passed (installed chromium headless shell for this run)"
+        },
+        {
+          "command": "bunx playwright test (all projects)",
+          "result": "failed",
+          "summary": "firefox/webkit projects failed only because those browsers are not installed; chromium passed"
+        }
+      ],
+      "validationOutput": [
+        "Unit: 18/18 pass. Type-check: clean. Lint: clean. E2E chromium: 2/2 pass (form renders; ID tab switches headings to Data Pribadi/Pengalaman Kerja/Keahlian Inti)."
+      ],
+      "residualRisks": [
+        "nuxt/ui UButton renders ULink which emits benign 'injection Symbol(route location) not found' Vue warnings in a router-less app (README: one page, no routing) — cosmetic, does not affect behavior",
+        "E2E verified on chromium only; firefox/webkit browsers not installed in this environment",
+        "Real nuxt/ui components render in jsdom tests (VTU stubs can't intercept unplugin-rewritten U* imports); reka-ui Tabs selected via mousedown event in tests",
+        "mergeResume intentionally drops unknown JSON keys (documented in code) — lenient import tradeoff per plan",
+        "components.d.ts will regenerate with new components on next dev/build (unplugin-vue-components) — no manual edit needed"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Form section delivered per oracle plan: resume data model (LangText dual-language nesting, sanitizing merge/validator, uid), reactive singleton store (getter/setter activeLang, capped skill groups, import/export JSON, in-place Object.assign mutation), 9 form sections + 5 entry forms + scrollspy nav with ID-incomplete dots, EN/ID segmented toggle (UTabs), warn-only validation (name required; email/date/no-contact soft warnings), options (photo switch, education position), toast remove confirmations, tests for store + panel, e2e rewrite.",
+      "reviewFindings": [
+        "no blockers"
+      ],
+      "manualNotes": "Key plan deviations, all validated against the code: (1) USegmented does not exist in nuxt/ui v4 — used UTabs variant='segment' :content='false' (the v4 segmented control). (2) eslint flat/essential enforces vue/no-mutating-props — entry forms receive entryId and resolve entries from the store instead of receiving mutable entry objects. (3) useScrollspy imported from '@nuxt/ui/composables' with a manual scroll fallback when IntersectionObserver is missing (jsdom). (4) FIXED A REAL BUG found during testing: returned store exposed activeLang as a primitive snapshot, so v-model on the toggle wrote to a dead plain property — EN/ID switching never reached reactive state; fixed with getter/setter accessors (this also unblocked the reka-ui mousedown-based tab test). (5) Added ambient '*.vue' shim to env.d.ts so .vue imports resolve under plain tsc too (project's vue-tsc already passed; checker-tooling flagged TS2307 which matches plain-tsc behavior on the pre-existing App.spec.ts import as well). (6) No iconify collection installed — buttons are text-only (no i-lucide-* icons). (7) No git repository exists in the workspace (git status: not a repository), so no files can be staged. Also installed Playwright chromium headless shell (~115MB) to execute the e2e suite."
+    }
+  }
+}

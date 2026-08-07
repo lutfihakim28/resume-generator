@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "id": "692b4376-ce18-4374-adaf-64eb00d95846",
+  "title": "PLAN the PDF EXPORT implementation for /home/capsvelte/Projects/resume-editor.",
+  "goal": "PLAN the PDF EXPORT implementation for /home/capsvelte/Projects/resume-editor.\n\nCONTEXT — read these files first:\n- /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/outputs/e0c02202/research.md (researcher brief: pick = jsPDF text-only API, ~98KB gzip; layout geometry: A4 210×297mm, 14mm margins → 516pt content width, 762pt height; Helvetica standard-14 fonts; e2e text-extraction via pdfjs-dist suggested)\n- README.md (export PDF is the product goal; EN or ID chosen at export time)\n- docs/research/software-developer-template.md (template spec §3 layout tokens + §5 ATS rules)\n- docs/plan/form-section-review-and-plan.md Parts 2, 4, 5 (prior decisions; live preview; JSON import/export done; ImportExportBar.vue holds the export buttons)\n- src/types/resume.ts, src/composables/useResumeStore.ts (activeLang, exportJson), src/components/resume-preview/ResumePreview.vue + PreviewSection.vue (HTML layout to mirror), src/components/resume-preview/ImportExportBar.vue (where Export PDF button goes), src/utils/download.ts, src/utils/resume-utils.ts (pickLang/formatMonthYear/presentLabel), src/utils/validation.ts\n- Existing tests (41 unit: resume-store/resume-form/resume-preview/import-export-bar/download; 6 e2e chromium). bun package manager. pi-lens reformatted some files — read fresh.\n\nPLAN MUST DECIDE (decisive, no open questions, under ~300 lines):\n1. Library + version + install (bun add jspdf@<ver> or latest — decide). License note. Explicitly note: NEVER doc.html() (rasterizes).\n2. Architecture: pure TS module src/utils/pdf-export.ts (buildPdf(resume, lang) → Uint8Array/blob) separate from UI; which helpers it reuses (resume-utils, or its own copy of headline-string builders — decide; avoid duplicating layout logic in HTML preview, but keep the module UI-free and jsdom-safe).\n3. UI: Export PDF button in ImportExportBar (data-testid), export-time language selection (README requires EN or ID chosen at export time — decide the UX: segmented control in the bar vs export-activeLang vs dialog; pick one and justify), toast copy for success/error, filename (e.g. resume-<slug>-en.pdf — decide), loading state if generation is async (it is sync for 1-2 pages — decide if a loading state is still warranted).\n4. Layout mapping: every section from template §3 → jsPDF calls (header name 19pt bold / title 11.5pt accent / contact+links 10pt secondary; section heading 12pt bold + 1pt accent rule; body 10.5pt leading 1.35 → 14.2pt line height; A4, 14mm margins; right-aligned dates; bullets; skills groups; projects; education position option; certifications; languages; photo: decide now or defer — justify; accent #1E5AA8 → jsPDF RGB). Page-break strategy: keep heading+first line together, avoid splitting an entry mid-bullet, 2-page hard cap (template §3.1) — overflow policy: truncate or allow 2nd page (decide).\n5. Empty/incomplete resume: export allowed or blocked (align with JSON export decision — allowed) — toast copy.\n6. Tests: unit strategy for pdf-export (assert page count / text presence — practical approach without pdfjs in jsdom: stub jsPDF? or use pdfjs-dist in vitest node? decide; keep tests fast and non-flaky; filename + language variant tests) and e2e (click Export PDF → expectDownload; pdfjs-dist text extraction in Playwright to assert selectable text contains name/sections — decide whether pdfjs-dist is added as devDependency for e2e, size/scope). Keep existing 41 unit + 6 e2e green.\n7. Implementation steps for worker (ordered; bun add; paths; verification commands).\n8. Risks/gotchas: jsPDF + Vite 8 ESM, dompurify/canvg side effects, jsdom missing canvas (unit tests must not touch doc.html()), PDF metadata (title/author — nice touch, decide), EN/ID month labels.",
+  "status": "completed",
+  "createdAt": "2026-08-07T03:46:32.764Z",
+  "updatedAt": "2026-08-07T03:48:37.425Z",
+  "runs": [
+    {
+      "runId": "c2415fce",
+      "mode": "single",
+      "agent": "oracle",
+      "status": "completed",
+      "startedAt": "2026-08-07T03:48:37.425Z",
+      "completedAt": "2026-08-07T03:48:37.425Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c2415fce_oracle_0_output.md"
+    },
+    {
+      "kind": "other",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c2415fce_oracle_0_transcript.jsonl",
+      "description": "Child transcript"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "All context gathered. Producing the plan:\n\n# Plan: PDF Export (jsPDF) — resume-editor\n\n**Inherited decisions honored:** README (PDF export is the product goal; \"English or Indonesia as user selected\"); Part 2 decisions (export language chosen at export time — PDF is EN *or* ID; JSON always both; lenient import; template `dev-hybrid-id-no-photo`); Part 4 (live preview landed, sheet is pure HTML); Part 5 (JSON import/export done; `ImportExportBar.vue` holds export buttons; `downloadTextFile` util; slug/filename convention; toast pattern).\n\n**Deliberate revision of Part 2 Decision 1** (was: `window.print()` + print CSS, \"v1 only; revisit if a text-preserving lib is needed\"): the user explicitly commissioned a library search; the research brief picks **jsPDF text-only**, which is text-preserving (ATS-safe per template §5) and deterministic across browsers — so the export workstream now uses jsPDF instead of print-CSS. The `print:hidden` class on the bar stays harmless.\n\n## 1. Library, version, install\n\n- **Pick: jsPDF, text-only API** (`import { jsPDF } from 'jspdf'`). ~330 KB min / **~98 KB gzip** (research §1; `[MEM]` — verify with `npm view jspdf version dist.unpackedSize` before committing). MIT. Actively maintained.\n- Install: `bun add jspdf` (latest stable; if 3.x exists, confirm text-only API surface is unchanged: `new jsPDF({unit, format})`, `setFont/setFontSize/setTextColor/setDrawColor/setLineWidth`, `splitTextToSize`, `getTextWidth`, `text`, `textWithLink`, `addPage`, `getNumberOfPages`, `output('arraybuffer')`, `setProperties`).\n- **BLOCKER-LEVEL RULE: never call `doc.html()`** — that path rasterizes via html2canvas and violates template §5 (ATS text-in-image). Also never `doc.save()` (harder to test; use `output('arraybuffer')` + existing download util).\n- Runner-up (rejected): pdfmake (~430–470 KB gzip) — better layout ergonomics, fails the lightweight criterion. pdf-lib (~90 KB) — no wrap helper, most effort.\n- Fonts: **Helvetica (PDF standard-14, WinA...",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Plan is grounded in fresh reads of research.md (jsPDF pick, ~98KB gzip, [MEM] flags), README, docs/plan Parts 2/4/5, sections.ts, resume-utils.ts, download.ts, ImportExportBar.vue, ResumePreview.vue, vitest.config.ts (jsdom default → node-env per-file override), package.json (no pdf deps; bun). All 8 required decision points answered decisively with justification."
+        }
+      ],
+      "changedFiles": [],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "npm view jspdf version dist.unpackedSize (size verification)",
+          "result": "not-run",
+          "summary": "No shell/web tools in this run; [MEM] estimates must be verified by the worker in step 1 before committing"
+        }
+      ],
+      "validationOutput": [
+        "Plan verified against: template spec §3 geometry (A4/14mm/516pt/762pt), §3.4 typography, §5 ATS rules; preview component structure; existing test inventory (41 unit, 6 e2e); Part 2 decision 2 (export language at export time)"
+      ],
+      "residualRisks": [
+        "jsPDF 3.x API surface and exact gzip size unverified ([MEM] flags in research.md) — worker verifies before implementing",
+        "Helvetica vs Arial visual parity needs one manual eyeball check",
+        "Non-Latin characters (CJK/emoji) will render as garbage in the PDF (WinAnsi) — accepted, documented",
+        "Photo rendering explicitly deferred (CORS fetch + raster complexity; photo is default-off in the preset)",
+        "jsPDF-in-Node plan B exists (recording fake) if the constructor misbehaves under vitest node environment"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "No files modified — this is a plan-only deliverable for the worker to execute",
+      "reviewFindings": [
+        "no blockers — plan is internally consistent with all inherited decisions; one deliberate revision flagged: Part 2 decision 1 (print-CSS) is superseded by jsPDF per the commissioned research"
+      ],
+      "manualNotes": "Key inherited constraints preserved: ATS text-only (never doc.html()), 2-page cap, language chosen at export time, empty-resume export allowed, single source of truth for headings (sections.ts) and string builders (resume-utils.ts after step 3). Worker should treat step 1 (version/size verification) as mandatory, not optional."
+    }
+  }
+}

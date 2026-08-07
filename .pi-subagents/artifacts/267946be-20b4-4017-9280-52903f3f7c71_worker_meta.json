@@ -1,0 +1,253 @@
+{
+  "runId": "267946be-20b4-4017-9280-52903f3f7c71",
+  "agent": "worker",
+  "task": "You are a delegated subagent running from a fork of the parent session. Treat the inherited conversation as reference-only context, not a live thread to continue. Do not continue or answer prior messages as if they are waiting for a reply. Your sole job is to execute the task below and return a focused result for that task using your tools.\n\nTask:\nIMPLEMENT PDF EXPORT in /home/capsvelte/Projects/resume-editor following the oracle plan exactly.\n\nPLAN (read it fully): /home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/c2415fce_oracle_0_output.md\n\nCRITICAL EXECUTION GUIDANCE (a previous worker timed out before writing any code — do NOT repeat that):\n1. The dependencies are ALREADY installed: jspdf@4.2.1 and pdfjs-dist@6.2.108 (package.json + bun.lock). Do NOT re-install. Do NOT research library APIs at length — a quick `ls node_modules/pdfjs-dist` / reading its package.json exports (2 minutes max) is all you need to find the right import path (look for legacy/build/pdf.mjs or build/pdf.mjs; pdfjs-dist 6.x may differ from the plan's assumption — adapt, don't rabbit-hole).\n2. TIME-BOX everything: implement the code FIRST (steps 3–6 of the plan), then write tests, then run verification. Any research/verification rabbit hole gets 2 minutes max; otherwise proceed with the plan's documented fallbacks (Plan B: vi.mock('jspdf') recording fake for unit tests; e2e fallback: assert download filename + %PDF magic bytes + size > 1000 if pdfjs text extraction fights Node 24 — note it as residual risk, don't block).\n3. Do not spend time on \"bundle sanity build\" unless everything else is done and green.\n\nTASKS per plan §6 (steps 3–10):\n3. src/utils/resume-utils.ts: add roleLine, educationLine, languageLabel, dateRange (all taking (entry, lang)), slugifyName. Refactor ResumePreview.vue and ImportExportBar.vue to import these (delete local copies — preview behavior must stay identical; its tests are the regression net). Note: ResumePreview currently calls its local roleLine/educationLine/languageLabel with no lang arg (uses reactive store lang) — the shared versions take (entry, lang); adapt call sites accordingly (pass store.activeLang).\n4. src/utils/download.ts: add downloadBlobFile(filename, blob, mime).\n5. src/utils/pdf-export.ts: buildPdf(resume, lang) → { data: Uint8Array, pages: number, truncated: boolean } — geometry, renderers, atomic page breaks (entries never split), 2-page cap with truncated flag, PDF metadata, NEVER doc.html(), NEVER doc.save() (use output('arraybuffer')). Photo: DEFERRED (text-only header).\n6. ImportExportBar.vue: \"Export PDF (EN)\" / \"Export PDF (ID)\" dynamic label button (data-testid=\"btn-export-pdf\"), exportPdf() with try/catch, toasts (success / truncated-warning / error), filename resume-<slug>-<lang>.pdf via slugifyName.\n7. Unit tests: new src/__tests__/pdf-export.spec.ts with // @vitest-environment node (real jsPDF; pdfjs-dist text extraction if it works in this Node — else Plan B), extend import-export-bar.spec.ts (+4 tests per plan §5).\n8. e2e: extend e2e/vue.spec.ts (+2 tests per plan §5 — export PDF download with filename + text extraction or fallback).\n9. Verify: bun run test:unit, bun run type-check, bun run lint, bunx playwright test --project=chromium. Keep ALL existing tests green (41 unit + 6 e2e).\n10. Update docs/plan/form-section-review-and-plan.md with Part 6 (implementation record, same pattern as Parts 4–5).\n\nConventions: script setup + TS, @nuxt/ui v4, data-testid, explicit imports. pi-lens reformatted some files — read fresh before editing. Do NOT add any dependency beyond jspdf + pdfjs-dist (already present). bun package manager.\n\nFinal response: files created/changed, verification results (test counts), deviations from plan, residual risks. Keep it under ~60 lines.\n\n## Acceptance Contract\nAcceptance level: checked\nCompletion is not accepted from prose alone. End with a structured acceptance report.\n\nCriteria:\n- criterion-1: Implement the requested change without widening scope\n- criterion-2: Return evidence sufficient for an independent acceptance review\n\nRequired evidence: changed-files, tests-added, commands-run, residual-risks, no-staged-files\n\nReview gate: required by reviewer.\n\nFinish with a fenced JSON block tagged `acceptance-report` in this shape:\nUse empty arrays when no items apply; array fields contain strings unless object entries are shown.\n`criteriaSatisfied[].status` must be exactly one of: satisfied, not-satisfied, not-applicable.\n`commandsRun[].result` must be exactly one of: passed, failed, not-run.\n`manualNotes` and `notes` are optional strings; an empty string means no note and does not satisfy `manual-notes` evidence.\n```acceptance-report\n{\n  \"criteriaSatisfied\": [\n    {\n      \"id\": \"criterion-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"specific proof\"\n    },\n    {\n      \"id\": \"criterion-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"specific proof\"\n    }\n  ],\n  \"changedFiles\": [\n    \"src/file.ts\"\n  ],\n  \"testsAddedOrUpdated\": [\n    \"test/file.test.ts\"\n  ],\n  \"commandsRun\": [\n    {\n      \"command\": \"command\",\n      \"result\": \"passed\",\n      \"summary\": \"short result\"\n    }\n  ],\n  \"validationOutput\": [\n    \"validation output or concise summary\"\n  ],\n  \"residualRisks\": [\n    \"none\"\n  ],\n  \"noStagedFiles\": true,\n  \"diffSummary\": \"short description of the diff\",\n  \"reviewFindings\": [\n    \"blocker: file.ts:12 - issue found, or no blockers\"\n  ],\n  \"manualNotes\": \"anything else the parent should know\"\n}\n```",
+  "exitCode": 0,
+  "model": "opencode/deepseek-v4-flash-free:max",
+  "attemptedModels": [
+    "opencode/deepseek-v4-flash-free:max"
+  ],
+  "modelAttempts": [
+    {
+      "model": "opencode/deepseek-v4-flash-free:max",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 43731,
+        "output": 35338,
+        "cacheRead": 5122048,
+        "cacheWrite": 0,
+        "cost": 0,
+        "turns": 41
+      }
+    }
+  ],
+  "acceptance": {
+    "status": "review-required",
+    "evidenceStatus": "checked",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": false,
+      "inferredReason": [
+        "async write-capable or risky run"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Implement the requested change without widening scope",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        },
+        {
+          "id": "criterion-2",
+          "must": "Return evidence sufficient for an independent acceptance review",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files"
+      ],
+      "verify": [],
+      "review": {
+        "agent": "reviewer",
+        "required": true
+      },
+      "stopRules": []
+    },
+    "inferredReason": [
+      "async write-capable or risky run"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Implement the requested change without widening scope",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      },
+      {
+        "id": "criterion-2",
+        "must": "Return evidence sufficient for an independent acceptance review",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "criterion:criterion-1",
+        "status": "passed",
+        "message": "Required criterion 'criterion-1' satisfied."
+      },
+      {
+        "id": "criterion:criterion-2",
+        "status": "passed",
+        "message": "Required criterion 'criterion-2' satisfied."
+      },
+      {
+        "id": "evidence:changed-files",
+        "status": "passed",
+        "message": "changed-files evidence present."
+      },
+      {
+        "id": "evidence:tests-added",
+        "status": "passed",
+        "message": "tests-added evidence present."
+      },
+      {
+        "id": "evidence:commands-run",
+        "status": "passed",
+        "message": "commands-run evidence present."
+      },
+      {
+        "id": "evidence:residual-risks",
+        "status": "passed",
+        "message": "residual-risks evidence present."
+      },
+      {
+        "id": "evidence:no-staged-files",
+        "status": "passed",
+        "message": "no-staged-files evidence present."
+      },
+      {
+        "id": "no-staged-files",
+        "status": "not-applicable",
+        "message": "git status unavailable; no staged-files check skipped"
+      }
+    ],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Implemented exactly the oracle plan's scope: jsPDF text-only pdf-export module + shared string builders refactor + Export PDF button with dynamic EN/ID label, filenames, toasts; no scope widening (no photo, no PDF import, no print-CSS removal). Deps limited to jspdf (runtime) and pdfjs-dist (devDep for text-extraction proof) — both already installed by the prior worker, none added by me."
+        },
+        {
+          "id": "criterion-2",
+          "status": "satisfied",
+          "evidence": "49/49 unit (7 files), vue-tsc --build clean, oxlint+eslint clean, chromium e2e 8/8 including real browser PDF download with %PDF magic-bytes check and pdfjs text extraction (EN + ID), bun run build-only succeeds. pdf-export.spec.ts uses REAL jsPDF + REAL pdfjs-dist (no mocks) proving ATS-safe selectable text."
+        }
+      ],
+      "changedFiles": [
+        "src/utils/pdf-export.ts (new)",
+        "src/utils/resume-utils.ts",
+        "src/utils/download.ts",
+        "src/components/resume-preview/ResumePreview.vue",
+        "src/components/resume-preview/ImportExportBar.vue",
+        "src/__tests__/pdf-export.spec.ts (new)",
+        "src/__tests__/import-export-bar.spec.ts",
+        "e2e/vue.spec.ts",
+        "docs/plan/form-section-review-and-plan.md"
+      ],
+      "testsAddedOrUpdated": [
+        "src/__tests__/pdf-export.spec.ts (new, 5 tests)",
+        "src/__tests__/import-export-bar.spec.ts (+4 tests: label/activeLang, download args + per-lang filenames, truncated warning toast, throw → error toast)",
+        "e2e/vue.spec.ts (+2 tests: EN PDF download with text extraction, ID PDF variant)"
+      ],
+      "commandsRun": [
+        {
+          "command": "bun run test:unit",
+          "result": "passed",
+          "summary": "7 files, 49/49 tests passed (was 41)"
+        },
+        {
+          "command": "bun run type-check",
+          "result": "passed",
+          "summary": "vue-tsc --build clean (app + vitest + node/e2e projects)"
+        },
+        {
+          "command": "bun run lint",
+          "result": "passed",
+          "summary": "oxlint + eslint --fix clean, exit 0"
+        },
+        {
+          "command": "bunx playwright test --project=chromium",
+          "result": "passed",
+          "summary": "8/8 e2e passed incl. PDF download + pdfjs text extraction"
+        },
+        {
+          "command": "bun run build-only",
+          "result": "passed",
+          "summary": "Vite build succeeds; jsPDF html2canvas/dompurify/canvg land as lazy chunks"
+        }
+      ],
+      "validationOutput": [
+        "Unit 49/49; type-check clean; lint clean; e2e chromium 8/8; production build OK. pdf-export.spec runs real jsPDF + real pdfjs-dist legacy text extraction (selectable text proven: name, section headings, dates, stack).",
+        "e2e PDF tests assert suggestedFilename (resume-budi-santoso-en.pdf / resume-siti-rahma-id.pdf), %PDF magic bytes, and extracted text (Budi Santoso / Professional Summary; Ringkasan Profil / ID summary)."
+      ],
+      "residualRisks": [
+        "WinAnsi charset: CJK/emoji render as garbage (accepted — template is EN/ID Latin, noted in pdf-export.ts)",
+        "Photo not in PDF v1 — deferred (cross-origin fetch/CORS complexity); no-photo preset has no placeholder hole",
+        "E2E verified chromium-only (firefox/webkit browsers not installed in this environment)",
+        "Font parity preview-vs-PDF is Helvetica≈Arial approximation — one manual eyeball check recommended",
+        "dist main chunk ~930 KB min is pre-existing (Vue + nuxt/ui + jspdf core); html2canvas/dompurify/canvg chunks are lazy import() and never fetched for text-only export"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "PDF export via jsPDF text-only API: buildPdf() util (A4, Helvetica, atomic page breaks, 2-page cap, metadata), shared string builders moved to resume-utils (preview refactored to use them), Export PDF (EN|ID) button in ImportExportBar with slugged filenames and toast feedback, 9 new unit tests + 2 e2e tests with real pdfjs text extraction, docs Part 6 record.",
+      "reviewFindings": [
+        "no blockers"
+      ],
+      "manualNotes": "Deviations from plan (all documented in code/docs): downloadBlobFile drops the redundant mime param (lint-flagged, Blob carries its type); PdfExportResult.data typed Uint8Array<ArrayBuffer> (TS 5.7+ generic typed arrays required for BlobPart); pdfjs-dist 6.x API adjustments (loadingTask.destroy() instead of pdf.destroy(), isEvalSupported removed from types). Prior worker had added jspdf@4.2.1 + pdfjs-dist@6.2.108 to package.json; I did not add or reinstall any dependency."
+    },
+    "reviewResult": {
+      "status": "review-required",
+      "findings": [
+        {
+          "severity": "non-blocking",
+          "issue": "Independent review has not been supplied.",
+          "rationale": "The run cannot be marked reviewed from child evidence alone."
+        }
+      ]
+    }
+  },
+  "launchContractDigest": "e81529daa313122ba19d863228b98e28fbe020c2873326d1492161a1f4cbc265",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:850e23191ecbb909"
+    ],
+    "configured": [],
+    "effective": [
+      "sha256:850e23191ecbb909"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "transcriptPath": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/267946be-20b4-4017-9280-52903f3f7c71_worker_transcript.jsonl",
+  "skills": [],
+  "timestamp": 1786077081350
+}

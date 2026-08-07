@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "cb1be07d-3521-4efb-83b2-2e0608986bfd",
+  "title": "Decision task: choose the most suitable resume template/layout for a SOFTWARE DEVELOPER in Indone...",
+  "goal": "Decision task: choose the most suitable resume template/layout for a SOFTWARE DEVELOPER in Indonesia, with the constraint NO PHOTO.\n\nContext (from prior research, stored at /home/capsvelte/Projects/resume-editor/docs/research/indonesia-resume-layout.md):\n- Reverse-chronological is dominant in Indonesia; combination/hybrid second; functional discouraged.\n- Photo (3x4) is the biggest local differentiator, but the user's product use-case here explicitly excludes a photo.\n- ATS-friendly single-column, conservative design (white/black/navy + one accent), 1-2 pages, standard section headings.\n- Local section order: Data Pribadi → Ringkasan/Profil → Pendidikan → Pengalaman Kerja → Keahlian → optional (Organisasi, Sertifikasi, Referensi).\n- For software developer roles: tech companies (startups, MNCs) in Indonesia commonly use English CVs, ATS screening, and value skills/tech stack visibility.\n\nYour tasks:\n1. Decide which template type fits a software developer best WITHOUT a photo: compare reverse-chronological vs combination/hybrid vs a skills-first variant; consider ATS, recruiter scanning habits for dev roles, and the no-photo constraint (does omitting the photo hurt in Indonesia? how to mitigate — e.g., profile summary line, GitHub/portfolio links).\n2. Design the concrete layout: exact section order, section headings (EN + ID), what content goes in each section, typography suggestions (fonts, sizes, margins), color suggestion, and one-page target for a mid-level developer.\n3. Write the result as a Markdown file at /home/capsvelte/Projects/resume-editor/docs/research/software-developer-template.md — include: decision + reasoning (why this template), the full layout spec (in a way a developer could later implement as a template/preset in the resume-editor app), a sample content skeleton with placeholder text (EN and ID variants of the section headings), and ATS/photo-mitigation notes.\n\nRead the research file first for context. Deliver the file path and a concise summary of the decision in your final response.",
+  "status": "completed",
+  "createdAt": "2026-08-07T02:29:30.819Z",
+  "updatedAt": "2026-08-07T02:31:44.951Z",
+  "runs": [
+    {
+      "runId": "e2a6fe31-76f0-43e4-beeb-61ee55caaa9a",
+      "mode": "single",
+      "asyncDir": "/tmp/pi-subagents-uid-1000/async-subagent-runs/e2a6fe31-76f0-43e4-beeb-61ee55caaa9a",
+      "status": "complete",
+      "startedAt": "2026-08-07T02:29:30.835Z",
+      "completedAt": "2026-08-07T02:31:44.951Z"
+    }
+  ],
+  "decisions": [],
+  "artifacts": [
+    {
+      "kind": "status",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/e2a6fe31-76f0-43e4-beeb-61ee55caaa9a/status.json"
+    },
+    {
+      "kind": "other",
+      "path": "/tmp/pi-subagents-uid-1000/async-subagent-runs/e2a6fe31-76f0-43e4-beeb-61ee55caaa9a/events.jsonl",
+      "description": "Lifecycle events"
+    },
+    {
+      "kind": "output",
+      "path": "/home/capsvelte/Projects/resume-editor/.pi-subagents/artifacts/e2a6fe31-76f0-43e4-beeb-61ee55caaa9a_oracle_output.md"
+    }
+  ],
+  "receipts": [],
+  "cwd": "/home/capsvelte/Projects/resume-editor",
+  "ownerSessionId": "/home/capsvelte/.pi/agent/sessions/--home-capsvelte-Projects-resume-editor--/2026-08-07T02-20-54-649Z_019fda06-01f9-7cfe-8d0d-1a95ce40a8b8.jsonl",
+  "summary": "oracle:\nMemory tool isn't available in this runtime — not a blocker; the MD file itself is the durable artifact (parent can persist a memory if desired).\n\n---\n\n## Oracle decision & deliverable\n\n**File written:** `/home/capsvelte/Projects/resume-editor/docs/research/software-developer-template.md` (290 lines, ~17 KB)\n\n### Decision summary\n\n**Template chosen: Combination/Hybrid — \"Tech Stack First\"** (not pure reverse-chronological, not functional).\n\n- **Layout:** Header (name, role title, contact, GitHub/LinkedIn/portfolio links) → Professional Summary (2–3 lines) → Core Skills (grouped tech stack) → Work Experience (reverse-chronological) → Projects (dev-specific, default on) → Education → optional Certifications/Languages.\n- **Why hybrid over chronological:** dev recruiters screen for stack keywords in the first scan; the research already endorses hybrid for fresh grads/senior roles, which is exactly where dev hiring skews. ATS safety is preserved (single column, standard headings, comma-list skills).\n- **Explicit deviation flagged:** general ID order puts Pendidikan before Pengalaman; this template moves Skills above Experience and Education to the bottom for mid-level devs (fresh-grad toggle restores Education to top).\n- **No-photo:** costs the least in dev roles (startups/MNCs hire ATS- and link-driven; guidance frames photo as optional-for-ATS). Mitigations: text-only header with **no empty photo placeholder**, GitHub/LinkedIn links as identity substitute, strong profile summary, photo toggle (default off; top-right 28×36mm, ATS-safe) for traditional SME applications.\n- **Spec is implementable:** A4, 14mm margins, single column, Arial/Calibri ≥10pt, one accent `#1E5AA8`, EN/ID heading table, a TypeScript preset-config sketch (`id: \"dev-hybrid-id-no-photo\"`), plus EN and ID sample skeletons."
+}
