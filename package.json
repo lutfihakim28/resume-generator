@@ -19,6 +19,7 @@
   "dependencies": {
     "@nuxt/ui": "^4.10.0",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "vue": "rc"
   },

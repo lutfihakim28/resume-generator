@@ -18,7 +18,7 @@ const lang = computed(() => store.activeLang)
 
 <template>
   <div class="space-y-3 rounded-lg border border-gray-200 p-4" data-testid="project-entry">
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <UFormField label="Project name">
         <UInput v-model="entry.name" placeholder="E-Commerce API" />
       </UFormField>

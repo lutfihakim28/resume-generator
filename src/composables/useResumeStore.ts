@@ -111,9 +111,10 @@ export function useResumeStore() {
   function addEducation(): void {
     state.resume.education.push({
       id: uid(),
+      level: 'university',
       degree: createLangText(),
       major: createLangText(),
-      university: '',
+      institution: '',
       city: '',
       year: '',
     })

@@ -10,7 +10,10 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
 </script>
 
 <template>
-  <section :id="section.id" class="scroll-mt-6 space-y-4 border-b border-gray-200 pb-6">
+  <section
+    :id="section.id"
+    class="scroll-mt-6 max-lg:scroll-mt-12 space-y-4 border-b border-gray-200 pb-6"
+  >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">Only certifications relevant to the target stack.</p>
 

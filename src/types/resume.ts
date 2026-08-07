@@ -3,7 +3,7 @@
  *
  * Nesting rule (oracle decision): free-text prose that differs per language
  * → `LangText { en, id }`; proper nouns / facts (name, company, city, dates,
- * URLs, university, stack tags) → single string, shared by both languages.
+ * URLs, institution, stack tags) → single string, shared by both languages.
  */
 
 export type Lang = 'en' | 'id'
@@ -57,11 +57,15 @@ export interface ProjectEntry {
   impact: LangText
 }
 
+/** Education institution kind — SMA (Indonesian senior high school) or university. */
+export type EducationLevel = 'university' | 'sma'
+
 export interface EducationEntry {
   id: string
+  level: EducationLevel
   degree: LangText
   major: LangText
-  university: string
+  institution: string
   city: string
   year: string
   gpa?: string
@@ -222,9 +226,12 @@ function sanitizeEducationEntry(value: unknown): EducationEntry | null {
   const o = value as Record<string, unknown>
   const next: EducationEntry = {
     id: keepStr(o.id, uid()),
+    // Unknown levels coerce to 'university' (lenient import; legacy files have no level).
+    level: o.level === 'sma' ? 'sma' : 'university',
     degree: sanitizeLangTextOrEmpty(o.degree),
     major: sanitizeLangTextOrEmpty(o.major),
-    university: keepStr(o.university, ''),
+    // Dual-key fallback: `institution` is the current key, `university` the legacy one.
+    institution: keepStr(o.institution, keepStr(o.university, '')),
     city: keepStr(o.city, ''),
     year: keepStr(o.year, ''),
   }

@@ -14,7 +14,14 @@
  */
 import { jsPDF } from 'jspdf'
 import { FORM_SECTIONS } from '@/components/resume-form/sections'
-import type { ExperienceEntry, Lang, ProjectEntry, Resume, SkillGroup } from '@/types/resume'
+import type {
+  EducationEntry,
+  ExperienceEntry,
+  Lang,
+  ProjectEntry,
+  Resume,
+  SkillGroup,
+} from '@/types/resume'
 import { dateRange, educationLine, languageLabel, pickLang, roleLine } from '@/utils/resume-utils'
 
 export interface PdfExportResult {
@@ -46,9 +53,9 @@ const ACCENT: [number, number, number] = [30, 90, 168]
 const NAME_SIZE = 19
 const NAME_LH = 23
 const TITLE_SIZE = 11.5
-const TITLE_LH = 14
+const TITLE_LH = 17
 const SMALL_SIZE = 10
-const SMALL_LH = 13
+const SMALL_LH = 15
 const HEADING_SIZE = 12
 const BODY_SIZE = 10.5
 const BODY_LH = 14.2
@@ -57,6 +64,14 @@ const META_LH = 12.4
 const SECTION_GAP = 10
 const ENTRY_GAP = 6
 const BULLET_INDENT = 12
+
+// Heading block geometry (template §3.4): the 0.6 pt accent rule sits 4.5 pt
+// below the heading baseline — clearing the 12 pt descenders (~2.5 pt) — and
+// the first content baseline is 4 pt + one body ascent below the rule, matching
+// the preview's `pb-[2pt]` + `mt-[4pt]` box model.
+const HEADING_RULE_GAP = 4.5
+const BODY_ASCENT = Math.round(BODY_SIZE * 0.72) // ≈ 7.5 pt glyph ascent of the body font
+const HEADING_BLOCK_H = HEADING_RULE_GAP + 4 + BODY_ASCENT
 
 const HEADINGS = new Map<string, { en: string; id: string }>()
 for (const section of FORM_SECTIONS) {
@@ -85,7 +100,9 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     }
     doc.addPage()
     y = Y0
-    return true
+    if (y + blockH <= PAGE_BOTTOM) return true
+    truncated = true // a single block taller than a whole page can never fit
+    return false
   }
 
   function wrap(text: string, fontSize: number, maxWidth = CONTENT_W): string[] {
@@ -95,7 +112,11 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     return Array.isArray(out) ? (out as string[]) : [out]
   }
 
+  /** Body lines at X0 — sets its own font so callers can't leak heading styles. */
   function drawLines(lines: string[], lineHeight: number): void {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(BODY_SIZE)
+    doc.setTextColor(...PRIMARY)
     for (const line of lines) {
       doc.text(line, X0, y)
       y += lineHeight
@@ -145,17 +166,17 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     firstSection = false
     const pair = HEADINGS.get(key)
     const heading = lang === 'id' ? (pair?.id ?? '') : (pair?.en ?? '')
-    if (!ensureSpace(gap + 6.5 + firstBlockH)) return false
+    if (!ensureSpace(gap + HEADING_BLOCK_H + firstBlockH)) return false
     y += gap
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(HEADING_SIZE)
     doc.setTextColor(...PRIMARY)
     doc.text(heading, X0, y)
-    const ruleY = y + 2
+    const ruleY = y + HEADING_RULE_GAP
     doc.setDrawColor(...ACCENT)
     doc.setLineWidth(0.6)
     doc.line(X0, ruleY, X0 + CONTENT_W, ruleY)
-    y = ruleY + 4
+    y = ruleY + 4 + BODY_ASCENT
     return true
   }
 
@@ -180,16 +201,18 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     return true
   }
 
-  /** Label bold + items normal, two-segment draw; wrapped items indent under the label. */
+  /** Label bold + items normal, two-segment draw; wrapped lines return to the left edge. */
   function drawSkillGroup(group: SkillGroup): boolean {
     const label = pickLang(group.label, lang)
     const items = pickLang(group.items, lang)
     if (!label && !items) return true
     const labelText = label ? `${label}:` : ''
-    doc.setFont('helvetica', 'normal')
+    // Measure in the BOLD face used for drawing — Helvetica-Bold is wider than
+    // normal, so a normal-weight measurement made the items collide with the label.
+    doc.setFont('helvetica', 'bold')
     doc.setFontSize(BODY_SIZE)
     const labelWidth = labelText ? doc.getTextWidth(labelText) : 0
-    const itemLines = items ? wrap(items, BODY_SIZE, CONTENT_W - labelWidth - 2) : []
+    const itemLines = items ? wrap(items, BODY_SIZE, CONTENT_W - labelWidth - 4) : []
     const totalH = Math.max(1, itemLines.length) * BODY_LH
     if (!ensureSpace(totalH)) return false
 
@@ -201,25 +224,54 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...PRIMARY)
     if (itemLines.length > 0) {
-      doc.text(itemLines[0]!, X0 + labelWidth + 2, y)
+      doc.text(itemLines[0]!, X0 + labelWidth + 4, y)
     }
     y += BODY_LH
     for (let i = 1; i < itemLines.length; i++) {
-      doc.text(itemLines[i]!, X0 + labelWidth + 2, y)
+      // Continuation lines wrap to the paragraph left edge, like the preview.
+      doc.text(itemLines[i]!, X0, y)
       y += BODY_LH
     }
     return true
   }
 
-  /** Pre-compute wrapped bullet lines for an entry (font set → then draw). */
-  function bulletLines(entry: ExperienceEntry): string[] {
-    const out: string[] = []
+  /**
+   * Pre-compute wrapped bullet lines for an entry (font set → then draw).
+   * Returns one sub-array per bullet so the first line (which gets the marker)
+   * is distinguishable from wrapped continuation lines.
+   */
+  function bulletLines(entry: ExperienceEntry): string[][] {
+    const out: string[][] = []
     for (const bullet of entry.bullets) {
       const text = pickLang(bullet, lang)
       if (!text) continue
-      out.push(...wrap(text, BODY_SIZE, CONTENT_W - BULLET_INDENT))
+      out.push(wrap(text, BODY_SIZE, CONTENT_W - BULLET_INDENT))
     }
     return out
+  }
+
+  /**
+   * Wrap the role line against the right-aligned dates so a long role can never
+   * collide with them or run off-page. Returns the wrapped lines and the dates
+   * geometry (both drawn on the first baseline).
+   */
+  function wrapRole(entry: ExperienceEntry): {
+    lines: string[]
+    dates: string
+    datesWidth: number
+  } {
+    const role = roleLine(entry, lang)
+    const dates = dateRange(entry, lang)
+    let datesWidth = 0
+    if (dates) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(META_SIZE)
+      datesWidth = doc.getTextWidth(dates)
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(BODY_SIZE)
+    const split = doc.splitTextToSize(role, CONTENT_W - datesWidth - 8)
+    return { lines: Array.isArray(split) ? (split as string[]) : [split], dates, datesWidth }
   }
 
   function drawExperience(): boolean {
@@ -227,34 +279,46 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     if (entries.length === 0) return true
     if (!beginSection('experience', entryHeight(entries[0]!))) return false
     for (const entry of entries) {
+      const role = wrapRole(entry)
       const lines = bulletLines(entry)
       const blockH =
-        BODY_LH + lines.length * BODY_LH + (entry.stack.trim() ? META_LH : 0) + ENTRY_GAP
+        role.lines.length * BODY_LH +
+        lines.reduce((n, bl) => n + bl.length, 0) * BODY_LH +
+        (entry.stack.trim() ? META_LH : 0) +
+        ENTRY_GAP
       if (!ensureSpace(blockH)) return false
 
-      // Role (bold) + right-aligned dates on the same baseline.
-      const role = roleLine(entry, lang)
-      const dates = dateRange(entry, lang)
+      // Role (bold, wrapped) + right-aligned dates on the first baseline.
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(BODY_SIZE)
       doc.setTextColor(...PRIMARY)
-      doc.text(role, X0, y)
-      if (dates) {
+      doc.text(role.lines[0]!, X0, y)
+      if (role.dates) {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(META_SIZE)
         doc.setTextColor(...SECONDARY)
-        const width = doc.getTextWidth(dates)
-        doc.text(dates, X0 + CONTENT_W - width, y)
+        doc.text(role.dates, X0 + CONTENT_W - role.datesWidth, y)
       }
       y += BODY_LH
-
-      for (const line of lines) {
-        doc.setFont('helvetica', 'normal')
+      for (let i = 1; i < role.lines.length; i++) {
+        doc.setFont('helvetica', 'bold')
         doc.setFontSize(BODY_SIZE)
         doc.setTextColor(...PRIMARY)
-        doc.text('•', X0, y)
-        doc.text(line, X0 + BULLET_INDENT, y)
+        doc.text(role.lines[i]!, X0, y)
         y += BODY_LH
+      }
+
+      for (const bullet of lines) {
+        bullet.forEach((line, i) => {
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(BODY_SIZE)
+          doc.setTextColor(...PRIMARY)
+          // Marker only on the first line of each bullet; continuation lines
+          // hang-indent with no marker (matches the preview's list rendering).
+          if (i === 0) doc.text('•', X0, y)
+          doc.text(line, X0 + BULLET_INDENT, y)
+          y += BODY_LH
+        })
       }
 
       if (entry.stack.trim()) {
@@ -279,15 +343,21 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
       if (!ensureSpace(projectHeight(project))) return false
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(BODY_SIZE)
-      doc.setTextColor(...PRIMARY)
       const display = project.name.trim() || project.url.trim()
       if (project.url.trim()) {
+        // Link = accent + underline, matching the preview's anchor styling.
+        doc.setTextColor(...ACCENT)
         try {
           doc.textWithLink(display, X0, y, { url: project.url })
         } catch {
           doc.text(display, X0, y) // link failure degrades to plain text
         }
+        const width = doc.getTextWidth(display)
+        doc.setDrawColor(...ACCENT)
+        doc.setLineWidth(0.5)
+        doc.line(X0, y + 1.5, X0 + width, y + 1.5)
       } else {
+        doc.setTextColor(...PRIMARY)
         doc.text(display, X0, y)
       }
       y += BODY_LH
@@ -315,26 +385,56 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     return true
   }
 
+  /**
+   * Wrap an education line against the right-aligned year so a long line can
+   * never collide with it or run off-page (ID translations are typically longer).
+   */
+  function wrapEducationLine(entry: EducationEntry): {
+    lines: string[]
+    year: string
+    yearWidth: number
+  } {
+    const line = educationLine(entry, lang)
+    const year = entry.year.trim()
+    let yearWidth = 0
+    if (year) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(META_SIZE)
+      yearWidth = doc.getTextWidth(year)
+    }
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(BODY_SIZE)
+    const split = doc.splitTextToSize(line, CONTENT_W - yearWidth - 8)
+    return { lines: Array.isArray(split) ? (split as string[]) : [split], year, yearWidth }
+  }
+
   function drawEducation(): boolean {
     const entries = resume.education.filter(
-      (e) => pickLang(e.degree, lang) !== '' || e.university.trim() !== '',
+      (e) => pickLang(e.degree, lang) !== '' || e.institution.trim() !== '',
     )
     if (entries.length === 0) return true
-    if (!beginSection('education', BODY_LH)) return false
+    if (!beginSection('education', wrapEducationLine(entries[0]!).lines.length * BODY_LH))
+      return false
     for (const entry of entries) {
-      if (!ensureSpace(BODY_LH)) return false
-      const line = educationLine(entry, lang)
+      const wrapped = wrapEducationLine(entry)
+      if (!ensureSpace(wrapped.lines.length * BODY_LH)) return false
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(BODY_SIZE)
       doc.setTextColor(...PRIMARY)
-      doc.text(line, X0, y)
-      if (entry.year.trim()) {
+      doc.text(wrapped.lines[0]!, X0, y)
+      if (wrapped.year) {
         doc.setFontSize(META_SIZE)
         doc.setTextColor(...SECONDARY)
-        const width = doc.getTextWidth(entry.year)
-        doc.text(entry.year, X0 + CONTENT_W - width, y)
+        doc.text(wrapped.year, X0 + CONTENT_W - wrapped.yearWidth, y)
       }
       y += BODY_LH
+      for (let i = 1; i < wrapped.lines.length; i++) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(BODY_SIZE)
+        doc.setTextColor(...PRIMARY)
+        doc.text(wrapped.lines[i]!, X0, y)
+        y += BODY_LH
+      }
     }
     return true
   }
@@ -344,11 +444,32 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
     if (certs.length === 0) return true
     if (!beginSection('certifications', BODY_LH)) return false
     for (const cert of certs) {
+      const name = cert.name.trim()
       const suffix = [cert.issuer.trim(), cert.year.trim()].filter(Boolean).join(' | ')
-      const line = suffix ? `${cert.name} — ${suffix}` : cert.name
-      const lines = wrap(line, BODY_SIZE)
-      if (!ensureSpace(lines.length * BODY_LH)) return false
-      drawLines(lines, BODY_LH)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(BODY_SIZE)
+      doc.setTextColor(...PRIMARY)
+      const nameWidth = doc.getTextWidth(name)
+      const suffixLines = suffix ? wrap(`— ${suffix}`, BODY_SIZE, CONTENT_W - nameWidth - 3) : []
+      if (!ensureSpace(Math.max(1, suffixLines.length) * BODY_LH)) return false
+      // Name bold + " — issuer | year" normal, matching the preview's semibold name.
+      // wrap() resets the font to normal — re-assert bold right before drawing.
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(BODY_SIZE)
+      doc.setTextColor(...PRIMARY)
+      doc.text(name, X0, y)
+      if (suffixLines.length > 0) {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...PRIMARY)
+        doc.text(suffixLines[0]!, X0 + nameWidth + 3, y)
+      }
+      y += BODY_LH
+      for (let i = 1; i < suffixLines.length; i++) {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...PRIMARY)
+        doc.text(suffixLines[i]!, X0, y)
+        y += BODY_LH
+      }
     }
     return true
   }
@@ -375,7 +496,12 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
 
   function entryHeight(entry: ExperienceEntry): number {
     const lines = bulletLines(entry)
-    return BODY_LH + lines.length * BODY_LH + (entry.stack.trim() ? META_LH : 0) + ENTRY_GAP
+    return (
+      wrapRole(entry).lines.length * BODY_LH +
+      lines.reduce((n, bl) => n + bl.length, 0) * BODY_LH +
+      (entry.stack.trim() ? META_LH : 0) +
+      ENTRY_GAP
+    )
   }
 
   function projectHeight(project: ProjectEntry): number {

@@ -1,0 +1,249 @@
+{
+  "version": 1,
+  "personal": {
+    "name": "Muhamad Lutfi Hakim",
+    "title": {
+      "en": "Software Developer",
+      "id": "Software Developer"
+    },
+    "phone": "6285155422771",
+    "email": "lutfihakim288@gmail.com",
+    "city": "Semarang",
+    "github": "",
+    "linkedin": "",
+    "portfolio": "",
+    "photoUrl": ""
+  },
+  "summary": {
+    "en": "Software developer with experience building web and mobile applications since 2020. Started as a frontend developer working with Vue.js, then expanded into mobile development using Capacitor and Flutter. Alongside professional roles, I have taken freelance work as a full-stack developer with Next.js, frontend with Vue.js, and backend with Laravel and Node.js. Most confident building web applications with Vue.js, while staying open to developing multi-platform apps based on my skills.",
+    "id": "Software developer dengan pengalaman membangun aplikasi web dan mobile sejak 2020. Memulai karier sebagai frontend developer dengan Vue.js, kemudian berkembang ke pengembangan aplikasi mobile menggunakan Capacitor dan Flutter. Di sela pekerjaan profesional, saya menerima pekerjaan freelance sebagai fullstack developer dengan Next.js, frontend dengan Vue.js, serta backend dengan Laravel dan Node.js. Paling percaya diri membangun aplikasi web dengan Vue.js, namun tetap terbuka mengembangkan aplikasi multi-platform sesuai keahlian."
+  },
+  "skills": [
+    {
+      "id": "sk-1",
+      "label": {
+        "en": "Frontend Web",
+        "id": "Frontend Web"
+      },
+      "items": {
+        "en": "Vue.js, Svelte, Next.js, Nuxt.js, HTML, CSS, Tailwind CSS",
+        "id": "Vue.js, Svelte, Next.js, Nuxt.js, HTML, CSS, Tailwind CSS"
+      }
+    },
+    {
+      "id": "sk-2",
+      "label": {
+        "en": "Backend",
+        "id": "Backend"
+      },
+      "items": {
+        "en": "Laravel, Node.js, Express.js",
+        "id": "Laravel, Node.js, Express.js"
+      }
+    },
+    {
+      "id": "sk-3",
+      "label": {
+        "en": "Mobile",
+        "id": "Mobile"
+      },
+      "items": {
+        "en": "Flutter, Capacitor, Android",
+        "id": "Flutter, Capacitor, Android"
+      }
+    },
+    {
+      "id": "sk-4",
+      "label": {
+        "en": "Languages",
+        "id": "Bahasa Pemrograman"
+      },
+      "items": {
+        "en": "JavaScript, TypeScript, PHP, SQL, Dart",
+        "id": "JavaScript, TypeScript, PHP, SQL, Dart"
+      }
+    }
+  ],
+  "experience": [
+    {
+      "id": "exp-1",
+      "role": {
+        "en": "Frontend Web Developer",
+        "id": "Frontend Web Developer"
+      },
+      "company": "GeekGarden Software House",
+      "city": "Sleman",
+      "start": "02/2022",
+      "end": "01/2023",
+      "bullets": [
+        {
+          "en": "Maintained an accounting application built with Vue.js and Vuetify, creating custom Vuetify components to meet client-specific needs.",
+          "id": "Memelihara aplikasi akuntansi berbasis Vue.js dan Vuetify, membuat komponen Vuetify kustom untuk memenuhi kebutuhan spesifik klien."
+        },
+        {
+          "en": "Developed a gold pawn application from scratch to release using Vue within a Laravel + Inertia + Vue monolith — a flagship project that shipped smoothly.",
+          "id": "Mengembangkan aplikasi gada emas dari awal hingga rilis menggunakan Vue dalam sistem monolith Laravel + Inertia + Vue — proyek andalan yang berhasil rilis dengan lancar."
+        },
+        {
+          "en": "Contributed to an online store for a toy-collection client, handling purchase orders on the admin side and the shopping cart on the end-user side.",
+          "id": "Berkontribusi pada aplikasi online store untuk klien koleksi mainan, menangani purchasing order di sisi admin dan keranjang belanja di sisi end user."
+        }
+      ],
+      "stack": "Vue.js, Nuxt.js, Vuetify, Laravel, Inertia.js"
+    },
+    {
+      "id": "exp-2",
+      "role": {
+        "en": "Frontend Web Developer",
+        "id": "Frontend Web Developer"
+      },
+      "company": "Nusatech",
+      "city": "Semarang",
+      "start": "01/2023",
+      "end": "11/2023",
+      "bullets": [
+        {
+          "en": "Maintained admin dashboard applications serving various end-user applications.",
+          "id": "Memelihara aplikasi dashboard admin untuk berbagai aplikasi end user."
+        }
+      ],
+      "stack": "Vue.js"
+    },
+    {
+      "id": "exp-3",
+      "role": {
+        "en": "Android Developer",
+        "id": "Android Developer"
+      },
+      "company": "Golektruk dot com",
+      "city": "Semarang",
+      "start": "01/2024",
+      "end": "08/2026",
+      "bullets": [
+        {
+          "en": "Maintained a logistics marketing application built with Svelte and Capacitor for Android.",
+          "id": "Memelihara aplikasi pemasaran logistik berbasis Svelte dan Capacitor untuk Android."
+        },
+        {
+          "en": "Part of the team developing a logistics application using Flutter.",
+          "id": "Bagian dari tim pengembangan aplikasi logistik menggunakan Flutter."
+        },
+        {
+          "en": "Part of the team developing a POS application for multiple verticals — F&B, retail, and salon — using Flutter.",
+          "id": "Bagian dari tim pengembangan aplikasi POS untuk beberapa segmen — F&B, retail, dan salon — menggunakan Flutter."
+        }
+      ],
+      "stack": "Svelte, Capacitor, Flutter"
+    },
+    {
+      "id": "exp-4",
+      "role": {
+        "en": "Freelance Frontend Developer",
+        "id": "Freelance Frontend Developer"
+      },
+      "company": "Freelance",
+      "city": "",
+      "start": "04/2021",
+      "end": "02/2022",
+      "bullets": [
+        {
+          "en": "Part of a team developing the frontend for catering and dating applications.",
+          "id": "Bagian dari tim pengembangan frontend aplikasi catering dan dating."
+        }
+      ],
+      "stack": "Vue.js"
+    },
+    {
+      "id": "exp-5",
+      "role": {
+        "en": "Freelance Backend Developer",
+        "id": "Freelance Backend Developer"
+      },
+      "company": "Freelance",
+      "city": "",
+      "start": "11/2023",
+      "end": "12/2024",
+      "bullets": [
+        {
+          "en": "Built APIs consumed by Flutter and React developers for a tea packaging distribution application.",
+          "id": "Membangun API yang digunakan developer Flutter dan React untuk aplikasi distribusi teh kemasan."
+        }
+      ],
+      "stack": "Laravel"
+    },
+    {
+      "id": "exp-6",
+      "role": {
+        "en": "Freelance Fullstack Developer",
+        "id": "Freelance Fullstack Developer"
+      },
+      "company": "Freelance",
+      "city": "",
+      "start": "04/2024",
+      "end": "09/2024",
+      "bullets": [
+        {
+          "en": "Developed transaction features end-to-end for a ticket recording application used by a ticketing service provider.",
+          "id": "Mengembangkan fitur transaksi end-to-end untuk aplikasi pencatatan tiket penyedia jasa tiketing."
+        }
+      ],
+      "stack": "Next.js"
+    }
+  ],
+  "projects": [
+    {
+      "id": "prj-1",
+      "name": "Dompet",
+      "url": "",
+      "description": {
+        "en": "A personal finance recording app built on proper accounting principles (double-entry bookkeeping), developed with Flutter and sqflite as the local database.",
+        "id": "Aplikasi catatan keuangan personal berbasis prinsip akuntansi yang proper (pembukuan double-entry), dikembangkan dengan Flutter dan sqflite sebagai database lokal."
+      },
+      "stack": "Flutter, sqflite",
+      "impact": {
+        "en": "Currently being rewritten as an offline-first Flutter app — a self-driven project to deepen Flutter expertise and financial data modeling.",
+        "id": "Sedang ditulis ulang sebagai aplikasi offline-first dengan Flutter — proyek mandiri untuk memperdalam keahlian Flutter dan pemodelan data keuangan."
+      }
+    }
+  ],
+  "education": [
+    {
+      "id": "edu-1",
+      "level": "sma",
+      "degree": {
+        "en": "High School",
+        "id": "SMA"
+      },
+      "major": {
+        "en": "Natural Sciences",
+        "id": "IPA"
+      },
+      "institution": "SMA N 12 Semarang",
+      "city": "Semarang",
+      "year": "2015"
+    }
+  ],
+  "certifications": [],
+  "languages": [
+    {
+      "id": "lang-1",
+      "name": "Bahasa Indonesia",
+      "proficiency": {
+        "en": "Native",
+        "id": "Asli"
+      }
+    },
+    {
+      "id": "lang-2",
+      "name": "English",
+      "proficiency": {
+        "en": "Intermediate",
+        "id": "Menengah"
+      }
+    }
+  ],
+  "options": {
+    "showPhoto": false,
+    "educationPosition": "bottom"
+  }
+}

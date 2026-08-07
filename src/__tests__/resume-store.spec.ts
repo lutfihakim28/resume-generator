@@ -56,6 +56,94 @@ describe('useResumeStore', () => {
     expect(store.resume.languages).toHaveLength(1)
   })
 
+  it('creates education entries with university level by default', () => {
+    const store = useResumeStore()
+    store.addEducation()
+    expect(store.resume.education[0]!.level).toBe('university')
+    expect(store.resume.education[0]!.institution).toBe('')
+  })
+
+  it('imports a legacy v1 resume.json using the university key into institution', () => {
+    const store = useResumeStore()
+    const result = store.importJson(
+      JSON.stringify({
+        version: 1,
+        personal: { name: 'Budi' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: [
+          {
+            degree: { en: 'S.Kom.', id: '' },
+            major: { en: 'Informatics', id: '' },
+            university: 'Universitas Indonesia',
+            city: 'Depok',
+            year: '2020',
+          },
+        ],
+        certifications: [],
+        languages: [],
+      }),
+    )
+    expect(result.ok).toBe(true)
+    const entry = store.resume.education[0]!
+    expect(entry.institution).toBe('Universitas Indonesia')
+    expect(entry.level).toBe('university')
+    expect('university' in entry).toBe(false)
+  })
+
+  it('preserves sma level and institution on import', () => {
+    const store = useResumeStore()
+    const result = store.importJson(
+      JSON.stringify({
+        version: 1,
+        personal: { name: 'Siti' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: [
+          {
+            level: 'sma',
+            degree: { en: 'SMA', id: 'SMA' },
+            major: { en: 'IPA', id: 'IPA' },
+            institution: 'SMAN 1 Jakarta',
+            city: 'Bandung',
+            year: '2021',
+          },
+        ],
+        certifications: [],
+        languages: [],
+      }),
+    )
+    expect(result.ok).toBe(true)
+    expect(store.resume.education[0]!.level).toBe('sma')
+    expect(store.resume.education[0]!.institution).toBe('SMAN 1 Jakarta')
+  })
+
+  it('coerces unknown education levels to university on import', () => {
+    const store = useResumeStore()
+    store.importJson(
+      JSON.stringify({
+        version: 1,
+        personal: { name: 'Siti' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: [
+          {
+            level: 'diploma',
+            degree: { en: 'D3', id: '' },
+            institution: 'Politeknik Negeri Bandung',
+          },
+        ],
+        certifications: [],
+        languages: [],
+      }),
+    )
+    expect(store.resume.education[0]!.level).toBe('university')
+    expect(store.resume.education[0]!.institution).toBe('Politeknik Negeri Bandung')
+  })
+
   it('round-trips exportJson → importJson', () => {
     const store = useResumeStore()
     store.resume.personal.name = 'Budi Santoso'

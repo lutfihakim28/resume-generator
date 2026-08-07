@@ -55,9 +55,10 @@ function fillResume(resume: Resume): void {
   })
   resume.education.push({
     id: 'e1',
+    level: 'university',
     degree: { en: 'S.Kom.', id: 'S.Kom.' },
     major: { en: 'Informatics Engineering', id: 'Teknik Informatika' },
-    university: 'Universitas Indonesia',
+    institution: 'Universitas Indonesia',
     city: 'Depok',
     year: '2020',
   })
@@ -211,5 +212,23 @@ describe('ResumePreview', () => {
     const wrapper = mountPreview()
 
     expect(wrapper.text()).toContain('March 2022 – Present')
+  })
+
+  it('renders an SMA education entry without GPA', () => {
+    const store = useResumeStore()
+    store.resume.education.push({
+      id: 'sma1',
+      level: 'sma',
+      degree: { en: 'SMA', id: 'SMA' },
+      major: { en: 'IPA', id: 'IPA' },
+      institution: 'SMAN 1 Jakarta',
+      city: 'Bandung',
+      year: '2021',
+      gpa: '3.9', // legacy data must not leak GPA for SMA entries
+    })
+    const wrapper = mountPreview()
+
+    expect(wrapper.text()).toContain('SMA, IPA — SMAN 1 Jakarta, Bandung')
+    expect(wrapper.text()).not.toContain('GPA')
   })
 })

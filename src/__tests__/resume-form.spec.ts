@@ -105,6 +105,41 @@ describe('ResumeFormPanel', () => {
     expect(entry.bullets).toHaveLength(1)
   })
 
+  it('switches an education entry between University and SMA level', async () => {
+    const wrapper = mountPanel()
+    const store = useResumeStore()
+
+    await wrapper.find('[data-testid="add-education"]').trigger('click')
+    expect(store.resume.education[0]!.level).toBe('university')
+
+    const levelPicker = wrapper.find('[data-testid="education-level"]')
+    expect(levelPicker.exists()).toBe(true)
+    const gpaInput = wrapper.find('input[placeholder="3.7 / 4.0"]')
+    expect(gpaInput.exists()).toBe(true)
+
+    // Switch to SMA → level flips, GPA row disappears, School label appears.
+    // (English UI labels the level "Senior High School"; ID labels it "SMA".)
+    const smaTab = levelPicker
+      .findAll('button[role="tab"]')
+      .find((tab) => tab.text() === 'Senior High School')
+    expect(smaTab).toBeDefined()
+    await smaTab!.trigger('mousedown')
+
+    expect(store.resume.education[0]!.level).toBe('sma')
+    expect(wrapper.find('input[placeholder="3.7 / 4.0"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('School')
+
+    // Back to University → GPA returns.
+    const universityTab = levelPicker
+      .findAll('button[role="tab"]')
+      .find((tab) => tab.text() === 'University')
+    expect(universityTab).toBeDefined()
+    await universityTab!.trigger('mousedown')
+
+    expect(store.resume.education[0]!.level).toBe('university')
+    expect(wrapper.find('input[placeholder="3.7 / 4.0"]').exists()).toBe(true)
+  })
+
   it('ID-incomplete alert counts and clears with ID fields', async () => {
     const wrapper = mountPanel()
     const store = useResumeStore()

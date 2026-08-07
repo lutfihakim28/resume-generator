@@ -1,18 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { useResumeStore } from '@/composables/useResumeStore'
 import ImportExportBar from '../components/resume-preview/ImportExportBar.vue'
 
 /**
  * Deterministic toast: the bar calls useToast().add() — assert on the spy
  * instead of the toast DOM (rendering needs the UApp provider, flaky in
- * jsdom). The download util is mocked too (it has its own spec); here we
- * only test the bar's wiring.
+ * jsdom). The download util and zip util are mocked too (they have their own
+ * specs); here we only test the bar's wiring.
  */
-const { toastAddSpy, downloadSpy, downloadBlobSpy, buildPdfSpy } = vi.hoisted(() => ({
+const { toastAddSpy, downloadBlobSpy, buildPdfSpy, createBundleZipSpy } = vi.hoisted(() => ({
   toastAddSpy: vi.fn<(toast: { title: string; color: string }) => void>(),
-  downloadSpy: vi.fn<(filename: string, content: string, mime: string) => void>(),
   downloadBlobSpy: vi.fn<(filename: string, blob: Blob) => void>(),
   buildPdfSpy:
     vi.fn<
@@ -21,6 +20,8 @@ const { toastAddSpy, downloadSpy, downloadBlobSpy, buildPdfSpy } = vi.hoisted(()
         lang: 'en' | 'id',
       ) => { data: Uint8Array; pages: number; truncated: boolean }
     >(),
+  createBundleZipSpy:
+    vi.fn<(files: { name: string; content: string | Uint8Array }[]) => Promise<Blob>>(),
 }))
 
 vi.mock('@nuxt/ui/composables', () => ({
@@ -28,12 +29,15 @@ vi.mock('@nuxt/ui/composables', () => ({
 }))
 
 vi.mock('@/utils/download', () => ({
-  downloadTextFile: downloadSpy,
   downloadBlobFile: downloadBlobSpy,
 }))
 
 vi.mock('@/utils/pdf-export', () => ({
   buildPdf: buildPdfSpy,
+}))
+
+vi.mock('@/utils/zip', () => ({
+  createBundleZip: createBundleZipSpy,
 }))
 
 function mountBar() {
@@ -72,17 +76,19 @@ describe('ImportExportBar', () => {
   beforeEach(() => {
     useResumeStore().resetStore()
     toastAddSpy.mockClear()
-    downloadSpy.mockClear()
     downloadBlobSpy.mockClear()
     buildPdfSpy.mockReset()
     buildPdfSpy.mockReturnValue({ data: new Uint8Array([1, 2, 3]), pages: 1, truncated: false })
+    createBundleZipSpy.mockReset()
+    createBundleZipSpy.mockResolvedValue(new Blob(['zip'], { type: 'application/zip' }))
   })
 
-  it('renders export/import buttons and a hidden JSON-only file input', () => {
+  it('renders one bundle export button and the import input', () => {
     const wrapper = mountBar()
 
-    expect(wrapper.find('[data-testid="btn-export-pdf"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="btn-export-json"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="btn-export-bundle"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="btn-export-pdf"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="btn-export-json"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="btn-import-json"]').exists()).toBe(true)
     const input = wrapper.find('[data-testid="import-input"]')
     expect(input.attributes('type')).toBe('file')
@@ -90,44 +96,80 @@ describe('ImportExportBar', () => {
     expect(input.classes()).toContain('hidden')
   })
 
-  it('labels the PDF button with the active language and downloads resume-<slug>-<lang>.pdf', async () => {
+  it('exports a PDF + JSON bundle in one click (EN)', async () => {
     const store = useResumeStore()
     store.resume.personal.name = 'Budi Santoso'
+    store.resume.personal.email = 'budi@email.com'
     const wrapper = mountBar()
 
-    const button = wrapper.find('[data-testid="btn-export-pdf"]')
-    expect(button.text()).toContain('Export PDF (EN)')
+    const button = wrapper.find('[data-testid="btn-export-bundle"]')
+    expect(button.text()).toContain('Export PDF + JSON (EN)')
 
     await button.trigger('click')
+    await flushPromises()
 
     expect(buildPdfSpy).toHaveBeenCalledTimes(1)
+    expect(buildPdfSpy.mock.calls[0]![0]).toBe(store.resume)
     expect(buildPdfSpy.mock.calls[0]![1]).toBe('en')
+
+    expect(createBundleZipSpy).toHaveBeenCalledTimes(1)
+    const [files] = createBundleZipSpy.mock.calls[0]!
+    expect(files).toHaveLength(2)
+    expect(files[0]!.name).toBe('resume-budi-santoso-en.pdf')
+    expect(files[0]!.content).toEqual(new Uint8Array([1, 2, 3]))
+    expect(files[1]!.name).toBe('resume-budi-santoso.json')
+    const parsed = JSON.parse(files[1]!.content as string)
+    expect(parsed.version).toBe(1)
+    expect(parsed.personal.name).toBe('Budi Santoso')
+
     expect(downloadBlobSpy).toHaveBeenCalledTimes(1)
-    const [filename, blob] = downloadBlobSpy.mock.calls[0]!
-    expect(filename).toBe('resume-budi-santoso-en.pdf')
-    expect(blob.type).toBe('application/pdf')
+    const [zipName, blob] = downloadBlobSpy.mock.calls[0]!
+    expect(zipName).toBe('resume-budi-santoso-en.zip')
+    expect(blob.type).toBe('application/zip')
     expect(toastAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Resume exported as PDF (EN)', color: 'success' }),
+      expect.objectContaining({
+        title: 'Resume exported as PDF + JSON bundle (EN)',
+        color: 'success',
+      }),
     )
 
     // Language change updates the label and the exported variant.
     store.activeLang = 'id'
     await wrapper.vm.$nextTick()
-    expect(button.text()).toContain('Export PDF (ID)')
+    expect(button.text()).toContain('Export PDF + JSON (ID)')
     await button.trigger('click')
-    expect(downloadBlobSpy.mock.calls[1]![0]).toBe('resume-budi-santoso-id.pdf')
+    await flushPromises()
+    expect(buildPdfSpy.mock.calls[1]![1]).toBe('id')
+    expect(downloadBlobSpy.mock.calls[1]![0]).toBe('resume-budi-santoso-id.zip')
     expect(toastAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Resume exported as PDF (ID)', color: 'success' }),
+      expect.objectContaining({
+        title: 'Resume exported as PDF + JSON bundle (ID)',
+        color: 'success',
+      }),
     )
   })
 
-  it('warns when the generated PDF was truncated past 2 pages', async () => {
+  it('falls back to resume-en.zip with resume.json for a blank name', async () => {
+    const wrapper = mountBar()
+
+    await wrapper.find('[data-testid="btn-export-bundle"]').trigger('click')
+    await flushPromises()
+
+    const [files] = createBundleZipSpy.mock.calls[0]!
+    expect(files[0]!.name).toBe('resume-en.pdf')
+    expect(files[1]!.name).toBe('resume.json')
+    expect(downloadBlobSpy.mock.calls[0]![0]).toBe('resume-en.zip')
+  })
+
+  it('warns when the generated PDF was truncated past 2 pages (download still happens)', async () => {
     useResumeStore().resetStore()
     buildPdfSpy.mockReturnValue({ data: new Uint8Array([1]), pages: 2, truncated: true })
     const wrapper = mountBar()
 
-    await wrapper.find('[data-testid="btn-export-pdf"]').trigger('click')
+    await wrapper.find('[data-testid="btn-export-bundle"]').trigger('click')
+    await flushPromises()
 
+    expect(createBundleZipSpy).toHaveBeenCalledTimes(1)
     expect(downloadBlobSpy).toHaveBeenCalledTimes(1)
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,15 +179,17 @@ describe('ImportExportBar', () => {
     )
   })
 
-  it('shows an error toast when PDF generation throws', async () => {
+  it('shows an error toast and aborts when PDF generation throws', async () => {
     useResumeStore().resetStore()
     buildPdfSpy.mockImplementation(() => {
       throw new Error('boom')
     })
     const wrapper = mountBar()
 
-    await wrapper.find('[data-testid="btn-export-pdf"]').trigger('click')
+    await wrapper.find('[data-testid="btn-export-bundle"]').trigger('click')
+    await flushPromises()
 
+    expect(createBundleZipSpy).not.toHaveBeenCalled()
     expect(downloadBlobSpy).not.toHaveBeenCalled()
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -155,30 +199,22 @@ describe('ImportExportBar', () => {
     )
   })
 
-  it('exports the resume as resume-<slug>.json with success toast', async () => {
-    const store = useResumeStore()
-    store.resume.personal.name = 'Budi Santoso'
-    store.resume.personal.email = 'budi@email.com'
+  it('shows an error toast and aborts when the bundle cannot be created', async () => {
+    useResumeStore().resetStore()
+    createBundleZipSpy.mockRejectedValue(new Error('boom'))
     const wrapper = mountBar()
 
-    await wrapper.find('[data-testid="btn-export-json"]').trigger('click')
+    await wrapper.find('[data-testid="btn-export-bundle"]').trigger('click')
+    await flushPromises()
 
-    expect(downloadSpy).toHaveBeenCalledTimes(1)
-    const [filename, content, mime] = downloadSpy.mock.calls[0]!
-    expect(filename).toBe('resume-budi-santoso.json')
-    expect(mime).toBe('application/json')
-    const parsed = JSON.parse(content)
-    expect(parsed.version).toBe(1)
-    expect(parsed.personal.name).toBe('Budi Santoso')
+    expect(buildPdfSpy).toHaveBeenCalledTimes(1)
+    expect(downloadBlobSpy).not.toHaveBeenCalled()
     expect(toastAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Resume exported as JSON', color: 'success' }),
+      expect.objectContaining({
+        title: 'Export failed: could not create the bundle.',
+        color: 'error',
+      }),
     )
-  })
-
-  it('falls back to resume.json for a blank name', async () => {
-    const wrapper = mountBar()
-    await wrapper.find('[data-testid="btn-export-json"]').trigger('click')
-    expect(downloadSpy.mock.calls[0]![0]).toBe('resume.json')
   })
 
   it('imports a valid resume.json and fills the store', async () => {

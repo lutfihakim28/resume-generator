@@ -76,14 +76,15 @@ export function roleLine(entry: ExperienceEntry, lang: Lang): string {
   return [role, place].filter(Boolean).join(' — ')
 }
 
-/** "S.Kom., Informatics Engineering — Universitas Indonesia, Depok" (+ GPA). */
+/** "S.Kom., Informatics Engineering — Universitas Indonesia, Depok" (+ GPA, university only). */
 export function educationLine(entry: EducationEntry, lang: Lang): string {
   const degree = [pickLang(entry.degree, lang), pickLang(entry.major, lang)]
     .filter(Boolean)
     .join(', ')
-  const school = [entry.university.trim(), entry.city.trim()].filter(Boolean).join(', ')
+  const school = [entry.institution.trim(), entry.city.trim()].filter(Boolean).join(', ')
   const core = [degree, school].filter(Boolean).join(' — ')
-  return entry.gpa ? `${core} · GPA ${entry.gpa}` : core
+  // GPA is university-only — defensive guard for legacy sma data that carries one.
+  return entry.level !== 'sma' && entry.gpa ? `${core} · GPA ${entry.gpa}` : core
 }
 
 /** "Bahasa Indonesia (native)"; proficiency alone when the name is blank. */

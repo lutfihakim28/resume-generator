@@ -74,7 +74,7 @@ const projects = computed(() =>
   resume.value.projects.filter((p) => p.name.trim() !== '' || lt(p.description) !== ''),
 )
 const education = computed(() =>
-  resume.value.education.filter((e) => lt(e.degree) !== '' || e.university.trim() !== ''),
+  resume.value.education.filter((e) => lt(e.degree) !== '' || e.institution.trim() !== ''),
 )
 const certifications = computed(() =>
   resume.value.certifications.filter((c) => c.name.trim() !== ''),

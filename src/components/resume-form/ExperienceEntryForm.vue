@@ -41,7 +41,7 @@ const endModel = computed({
 
 <template>
   <div class="space-y-3 rounded-lg border border-gray-200 p-4" data-testid="experience-entry">
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <UFormField :label="`Role (${lang.toUpperCase()})`">
         <UInput v-model="entry.role[lang]" placeholder="Senior Backend Engineer" />
       </UFormField>
@@ -50,7 +50,7 @@ const endModel = computed({
       </UFormField>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <UFormField label="City">
         <UInput v-model="entry.city" placeholder="Jakarta" />
       </UFormField>
@@ -59,7 +59,7 @@ const endModel = computed({
       </UFormField>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <UFormField label="Start (MM/YYYY)">
         <UInput v-model="entry.start" placeholder="03/2022" data-testid="input-start" />
       </UFormField>

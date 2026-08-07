@@ -14,7 +14,7 @@ const positionItems = [
 </script>
 
 <template>
-  <section :id="section.id" class="scroll-mt-6 space-y-4">
+  <section :id="section.id" class="scroll-mt-6 max-lg:scroll-mt-12 space-y-4">
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">
       Template options from the dev-hybrid preset — applied in the live preview.

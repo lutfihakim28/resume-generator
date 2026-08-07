@@ -14,25 +14,50 @@ function removeEducation(id: string): void {
 
 const entry = computed(() => store.resume.education.find((e) => e.id === props.entryId)!)
 const lang = computed(() => store.activeLang)
+
+/** University/Universitas ↔ SMA/Senior High School — mirrors the educationPosition UTabs pattern. */
+const levelItems = computed(() => [
+  { label: lang.value === 'id' ? 'Universitas' : 'University', value: 'university' },
+  { label: lang.value === 'id' ? 'SMA' : 'Senior High School', value: 'sma' },
+])
+const isSma = computed(() => entry.value?.level === 'sma')
+const institutionLabel = computed(() => {
+  if (lang.value === 'id') return isSma.value ? 'Sekolah' : 'Universitas'
+  return isSma.value ? 'School' : 'University'
+})
+const institutionPlaceholder = computed(() =>
+  isSma.value ? 'SMAN 1 Jakarta' : 'Universitas Indonesia',
+)
+const degreePlaceholder = computed(() =>
+  isSma.value ? (lang.value === 'id' ? 'SMA' : 'Senior High School') : 'S.Kom.',
+)
+const majorPlaceholder = computed(() =>
+  isSma.value ? 'IPA / IPS' : 'Informatics Engineering / Teknik Informatika',
+)
 </script>
 
 <template>
   <div class="space-y-3 rounded-lg border border-gray-200 p-4" data-testid="education-entry">
-    <div class="grid grid-cols-2 gap-4">
+    <UTabs
+      v-model="entry.level"
+      :items="levelItems"
+      variant="segment"
+      :content="false"
+      data-testid="education-level"
+    />
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <UFormField :label="`Degree (${lang.toUpperCase()})`">
-        <UInput v-model="entry.degree[lang]" placeholder="S.Kom." />
+        <UInput v-model="entry.degree[lang]" :placeholder="degreePlaceholder" />
       </UFormField>
       <UFormField :label="`Major (${lang.toUpperCase()})`">
-        <UInput
-          v-model="entry.major[lang]"
-          placeholder="Informatics Engineering / Teknik Informatika"
-        />
+        <UInput v-model="entry.major[lang]" :placeholder="majorPlaceholder" />
       </UFormField>
     </div>
 
-    <div class="grid grid-cols-3 gap-4">
-      <UFormField label="University">
-        <UInput v-model="entry.university" placeholder="Universitas Indonesia" />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <UFormField :label="institutionLabel">
+        <UInput v-model="entry.institution" :placeholder="institutionPlaceholder" />
       </UFormField>
       <UFormField label="City">
         <UInput v-model="entry.city" placeholder="Depok" />
@@ -42,7 +67,7 @@ const lang = computed(() => store.activeLang)
       </UFormField>
     </div>
 
-    <UFormField label="GPA (optional)">
+    <UFormField v-if="entry.level === 'university'" label="GPA (optional)">
       <UInput v-model="entry.gpa" placeholder="3.7 / 4.0" />
     </UFormField>
 

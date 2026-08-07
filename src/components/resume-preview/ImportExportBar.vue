@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * JSON import/export toolbar for the preview panel (README: the preview panel
+ * Export/import toolbar for the preview panel (README: the preview panel
  * also contains import and export buttons). Talks to the store directly —
  * store.importJson / store.exportJson already hold all the logic; this
  * component adds only file I/O + toasts. `print:hidden` keeps it out of the
@@ -9,9 +9,10 @@
 import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 import { useResumeStore } from '@/composables/useResumeStore'
-import { downloadBlobFile, downloadTextFile } from '@/utils/download'
+import { downloadBlobFile } from '@/utils/download'
 import { buildPdf } from '@/utils/pdf-export'
 import { slugifyName } from '@/utils/resume-utils'
+import { createBundleZip } from '@/utils/zip'
 
 const store = useResumeStore()
 const toast = useToast()
@@ -20,36 +21,59 @@ const fileInput = ref<HTMLInputElement | null>(null)
 /** Guard against multi-MB files being read into memory for no reason. */
 const MAX_IMPORT_BYTES = 1_000_000
 
+/** "Budi Santoso" → "resume-budi-santoso-"; blank name → "resume-". */
+function nameBase(): string {
+  const slug = slugifyName(store.resume.personal.name)
+  return slug ? `resume-${slug}-` : 'resume-'
+}
+
 /** "Budi Santoso" → "resume-budi-santoso.json"; blank name → "resume.json". */
-function exportFilename(): string {
+function exportJsonName(): string {
   const slug = slugifyName(store.resume.personal.name)
   return slug ? `resume-${slug}.json` : 'resume.json'
 }
 
-function exportJson(): void {
-  downloadTextFile(exportFilename(), store.exportJson(), 'application/json')
-  toast.add({ title: 'Resume exported as JSON', color: 'success' })
-}
-
 /** Dynamic label makes the export-time language explicit (README: "as user selected"). */
-const exportPdfLabel = computed(() => `Export PDF (${store.activeLang.toUpperCase()})`)
+const exportBundleLabel = computed(() => `Export PDF + JSON (${store.activeLang.toUpperCase()})`)
 
-function exportPdf(): void {
+/** One action button exports the PDF + JSON as a single ZIP bundle. */
+async function exportBundle(): Promise<void> {
+  const lang = store.activeLang
+  const base = nameBase()
+  const pdfFilename = `${base}${lang}.pdf`
+  const jsonFilename = exportJsonName()
+  const zipFilename = `${base}${lang}.zip`
+
+  let result: { data: Uint8Array; truncated: boolean }
   try {
-    const result = buildPdf(store.resume, store.activeLang)
-    const slug = slugifyName(store.resume.personal.name)
-    const filename = `resume-${slug ? `${slug}-` : ''}${store.activeLang}.pdf`
-    downloadBlobFile(filename, new Blob([result.data], { type: 'application/pdf' }))
-    if (result.truncated) {
-      toast.add({
-        title: 'Resume is longer than 2 pages — the PDF was truncated.',
-        color: 'warning',
-      })
-    } else {
-      toast.add({ title: `Resume exported as PDF (${store.activeLang.toUpperCase()})`, color: 'success' })
-    }
+    result = buildPdf(store.resume, lang)
   } catch {
     toast.add({ title: 'Export failed: could not generate the PDF.', color: 'error' })
+    return
+  }
+
+  let bundle: Blob
+  try {
+    bundle = await createBundleZip([
+      { name: pdfFilename, content: result.data },
+      { name: jsonFilename, content: store.exportJson() },
+    ])
+  } catch {
+    toast.add({ title: 'Export failed: could not create the bundle.', color: 'error' })
+    return
+  }
+
+  downloadBlobFile(zipFilename, bundle)
+  if (result.truncated) {
+    toast.add({
+      title: 'Resume is longer than 2 pages — the PDF was truncated.',
+      color: 'warning',
+    })
+  } else {
+    toast.add({
+      title: `Resume exported as PDF + JSON bundle (${lang.toUpperCase()})`,
+      color: 'success',
+    })
   }
 }
 
@@ -99,18 +123,12 @@ function onFileChange(event: Event): void {
 </script>
 
 <template>
-  <div class="flex items-center justify-end gap-2">
+  <div class="flex flex-wrap items-center justify-end gap-2">
     <UButton
       variant="soft"
-      :label="exportPdfLabel"
-      data-testid="btn-export-pdf"
-      @click="exportPdf"
-    />
-    <UButton
-      variant="soft"
-      label="Export JSON"
-      data-testid="btn-export-json"
-      @click="exportJson"
+      :label="exportBundleLabel"
+      data-testid="btn-export-bundle"
+      @click="exportBundle"
     />
     <UButton
       variant="soft"

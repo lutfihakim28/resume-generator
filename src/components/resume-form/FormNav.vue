@@ -4,6 +4,12 @@ import { useScrollspy } from '@nuxt/ui/composables'
 import { useResumeStore } from '@/composables/useResumeStore'
 import { FORM_SECTIONS, sectionHeading, sectionIncompleteCount } from './sections'
 
+/**
+ * Fired after a section link is activated — lets a wrapping popup (mobile)
+ * close itself. No-op in the desktop sidebar.
+ */
+const emit = defineEmits<{ navigate: [] }>()
+
 const store = useResumeStore()
 
 /** jsdom has no IntersectionObserver — fall back to a scroll-position spy there. */
@@ -21,7 +27,16 @@ const sections = computed(() =>
 )
 
 function headingEl(id: string): HTMLElement | null {
-  return document.getElementById(id)
+  // Both layout branches render the same section ids (desktop grid + mobile
+  // tabs) and both stay mounted. `getElementById` would return the first one
+  // — which may live in a `display:none` branch, where `scrollIntoView` and
+  // IntersectionObserver are silent no-ops. Pick the visible instance
+  // (hidden elements report no layout rects).
+  const matches = document.querySelectorAll<HTMLElement>(`#${id}`)
+  for (const el of matches) {
+    if (el.getClientRects().length > 0 || el.offsetParent !== null) return el
+  }
+  return matches[0] ?? null
 }
 
 function refreshHeadings(): void {
@@ -44,6 +59,10 @@ function onScroll(): void {
 }
 
 function scrollToSection(id: string): void {
+  // Let a wrapping popup close (and a parent return focus to its trigger)
+  // BEFORE starting the smooth scroll: in Chromium a focus change cancels an
+  // in-progress smooth scroll, which made popup navigation appear dead.
+  emit('navigate')
   const el = headingEl(id)
   if (!el) return
   if (typeof el.scrollIntoView === 'function') {
