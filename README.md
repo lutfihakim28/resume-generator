@@ -8,6 +8,7 @@
 - Create resume through form
 - Import resume json from previous created resume to edit
 - Export resume to pdf as a product, and json as a data for editing
+- Save resume data to browser storage (localStorage) with one button
 - Resume can be exported in English or Indonesia as user selected
 
 ## Feature Breakdown

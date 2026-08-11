@@ -20,6 +20,14 @@ const state = reactive<{ resume: Resume; activeLang: Lang }>({
   activeLang: 'en',
 })
 
+/**
+ * localStorage key for the manual "save to browser" action. App name +
+ * `resume` + envelope/schema version: a future schema bump changes the key
+ * so stale blobs are naturally abandoned (and would be rejected by
+ * `isValidResumeJson` anyway).
+ */
+export const RESUME_STORAGE_KEY = 'resume-editor:resume:v1'
+
 export interface ImportResult {
   ok: boolean
   errors: string[]
@@ -53,6 +61,28 @@ export function useResumeStore() {
   /** Pretty-printed JSON including `version` — round-trips through `importJson`. */
   function exportJson(): string {
     return JSON.stringify(state.resume, null, 2)
+  }
+
+  /**
+   * Persist the current resume snapshot to localStorage. Explicit user action
+   * only — no auto-save. Serializes the resume (not `activeLang`) so the blob
+   * stays byte-identical in shape to an exported resume.json and can be
+   * re-imported with the same semantics. Snapshot at call time, not a live
+   * reference: later edits drift the stored value only on the next save.
+   */
+  function saveToLocalStorage(): { ok: boolean; errors: string[] } {
+    if (typeof localStorage === 'undefined') {
+      return { ok: false, errors: ['Storage unavailable'] }
+    }
+    try {
+      localStorage.setItem(RESUME_STORAGE_KEY, exportJson())
+      return { ok: true, errors: [] }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        return { ok: false, errors: ['Storage quota exceeded'] }
+      }
+      return { ok: false, errors: ['Storage unavailable'] }
+    }
   }
 
   function addSkillGroup(): void {
@@ -162,6 +192,7 @@ export function useResumeStore() {
     setActiveLang,
     importJson,
     exportJson,
+    saveToLocalStorage,
     addSkillGroup,
     removeSkillGroup,
     addExperience,

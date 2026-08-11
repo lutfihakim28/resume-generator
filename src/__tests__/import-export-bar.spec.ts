@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { flushPromises, mount } from '@vue/test-utils'
-import { useResumeStore } from '@/composables/useResumeStore'
+import { RESUME_STORAGE_KEY, useResumeStore } from '@/composables/useResumeStore'
 import ImportExportBar from '../components/resume-preview/ImportExportBar.vue'
 
 /**
@@ -75,6 +75,7 @@ async function pickFile(wrapper: ReturnType<typeof mountBar>, file: File): Promi
 describe('ImportExportBar', () => {
   beforeEach(() => {
     useResumeStore().resetStore()
+    localStorage.clear()
     toastAddSpy.mockClear()
     downloadBlobSpy.mockClear()
     buildPdfSpy.mockReset()
@@ -212,6 +213,51 @@ describe('ImportExportBar', () => {
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Export failed: could not create the bundle.',
+        color: 'error',
+      }),
+    )
+  })
+
+  it('renders the save-to-browser button next to import', () => {
+    const wrapper = mountBar()
+
+    const button = wrapper.find('[data-testid="btn-save-local"]')
+    expect(button.exists()).toBe(true)
+    expect(button.text()).toContain('Save to Browser')
+  })
+
+  it('saves the current resume JSON to localStorage on click', async () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Budi Santoso'
+    const wrapper = mountBar()
+
+    await wrapper.find('[data-testid="btn-save-local"]').trigger('click')
+
+    expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBe(store.exportJson())
+    expect(toastAddSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Resume saved to this browser.', color: 'success' }),
+    )
+  })
+
+  it('shows the quota error toast and keeps the store intact when saving fails', async () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Siti Rahma'
+    const wrapper = mountBar()
+
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError')
+    })
+    try {
+      await wrapper.find('[data-testid="btn-save-local"]').trigger('click')
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+    expect(store.resume.personal.name).toBe('Siti Rahma')
+    expect(toastAddSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Save failed: browser storage is full.',
         color: 'error',
       }),
     )

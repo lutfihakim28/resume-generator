@@ -2,9 +2,9 @@
 /**
  * Export/import toolbar for the preview panel (README: the preview panel
  * also contains import and export buttons). Talks to the store directly —
- * store.importJson / store.exportJson already hold all the logic; this
- * component adds only file I/O + toasts. `print:hidden` keeps it out of the
- * future print output.
+ * store.importJson / store.exportJson / store.saveToLocalStorage already hold
+ * all the logic; this component adds only file I/O + browser storage + toasts.
+ * `print:hidden` keeps it out of the future print output.
  */
 import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
@@ -91,6 +91,28 @@ function importErrorTitle(message: string): string {
   }
 }
 
+/** Map the store's distinct save-error strings to a single actionable toast title. */
+function saveErrorTitle(message: string): string {
+  switch (message) {
+    case 'Storage quota exceeded':
+      return 'Save failed: browser storage is full.'
+    case 'Storage unavailable':
+      return 'Save failed: browser storage is not available.'
+    default:
+      return 'Save failed.'
+  }
+}
+
+/** Manual save of the current resume JSON to this browser's localStorage. */
+function saveToBrowser(): void {
+  const result = store.saveToLocalStorage()
+  if (result.ok) {
+    toast.add({ title: 'Resume saved to this browser.', color: 'success' })
+  } else {
+    toast.add({ title: saveErrorTitle(result.errors[0] ?? ''), color: 'error' })
+  }
+}
+
 function onFileChange(event: Event): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -135,6 +157,12 @@ function onFileChange(event: Event): void {
       label="Import JSON"
       data-testid="btn-import-json"
       @click="fileInput?.click()"
+    />
+    <UButton
+      variant="soft"
+      label="Save to Browser"
+      data-testid="btn-save-local"
+      @click="saveToBrowser"
     />
     <input
       ref="fileInput"

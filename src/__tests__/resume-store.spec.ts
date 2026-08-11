@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useResumeStore } from '@/composables/useResumeStore'
+import { RESUME_STORAGE_KEY, useResumeStore } from '@/composables/useResumeStore'
+import type { Resume } from '@/types/resume'
 
 describe('useResumeStore', () => {
   beforeEach(() => {
     useResumeStore().resetStore()
+    localStorage.clear()
   })
 
   it('starts from a blank resume with template defaults', () => {
@@ -225,5 +227,97 @@ describe('useResumeStore', () => {
     store.resetStore()
     expect(store.resume.personal.name).toBe('')
     expect(store.activeLang).toBe('en')
+  })
+})
+
+describe('saveToLocalStorage', () => {
+  beforeEach(() => {
+    useResumeStore().resetStore()
+    localStorage.clear()
+  })
+
+  it('persists the current resume JSON snapshot at RESUME_STORAGE_KEY', () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Budi Santoso'
+    store.resume.personal.phone = '0812-0000'
+    store.addSkillGroup()
+    store.resume.skills[0]!.label.en = 'Languages'
+
+    const result = store.saveToLocalStorage()
+    expect(result).toEqual({ ok: true, errors: [] })
+
+    const raw = localStorage.getItem(RESUME_STORAGE_KEY)
+    expect(raw).toBe(store.exportJson())
+    const parsed = JSON.parse(raw!) as Resume
+    expect(parsed.version).toBe(1)
+    expect(parsed.personal.name).toBe('Budi Santoso')
+    expect(parsed.skills[0]!.label.en).toBe('Languages')
+  })
+
+  it('stores a snapshot, not a live reference (later edits need another save)', () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Siti Rahma'
+    const before = store.exportJson()
+
+    const result = store.saveToLocalStorage()
+    expect(result.ok).toBe(true)
+
+    store.resume.personal.name = 'Budi Santoso'
+    expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBe(before)
+  })
+
+  it('stores a blob that round-trips through importJson unchanged', () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Budi Santoso'
+    store.resume.summary.en = 'Backend engineer.'
+    store.addExperience()
+    store.resume.experience[0]!.role.en = 'Senior Backend Engineer'
+    const before = JSON.parse(store.exportJson()) as Resume
+
+    const result = store.saveToLocalStorage()
+    expect(result.ok).toBe(true)
+
+    const imported = useResumeStore().importJson(localStorage.getItem(RESUME_STORAGE_KEY)!)
+    expect(imported).toEqual({ ok: true, errors: [] })
+    expect(useResumeStore().resume).toEqual(before)
+  })
+
+  it('reports a quota error when setItem throws QuotaExceededError', () => {
+    const store = useResumeStore()
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError')
+    })
+    try {
+      const result = store.saveToLocalStorage()
+      expect(result).toEqual({ ok: false, errors: ['Storage quota exceeded'] })
+      expect(spy).toHaveBeenCalledWith(RESUME_STORAGE_KEY, store.exportJson())
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('reports storage unavailable when setItem throws any other error', () => {
+    const store = useResumeStore()
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    try {
+      const result = store.saveToLocalStorage()
+      expect(result).toEqual({ ok: false, errors: ['Storage unavailable'] })
+      expect(spy).toHaveBeenCalledTimes(1)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('reports storage unavailable when localStorage is undefined', () => {
+    const store = useResumeStore()
+    vi.stubGlobal('localStorage', undefined)
+    try {
+      const result = store.saveToLocalStorage()
+      expect(result).toEqual({ ok: false, errors: ['Storage unavailable'] })
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
