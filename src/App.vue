@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
+import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
 import ResumeFormPanel from '@/components/resume-form/ResumeFormPanel.vue'
 import ResumePreview from '@/components/resume-preview/ResumePreview.vue'
 
@@ -20,6 +21,30 @@ const formPanelEl = ref<ComponentPublicInstance | null>(null)
 const reviewPanelEl = ref<ComponentPublicInstance | null>(null)
 
 /** Panels stay mounted across tab switches — reset the newly shown one to the top. */
+const { saveToBrowser } = useSaveToBrowser()
+
+/**
+ * Ctrl+S (Cmd+S on macOS) saves the resume to this browser's localStorage —
+ * the same action as the "Save to Browser" toolbar button. Only the plain
+ * save chord is captured: Ctrl+Shift+S (browser "Save As…") and Ctrl+Alt+S
+ * (menu accelerators) pass through untouched, and no match is made while an
+ * IME composition is in flight. Listeners live on `window` (repo precedent:
+ * FormNav.vue) so keydowns from form fields are covered; the app *is* a form.
+ */
+function isSaveShortcut(e: KeyboardEvent): boolean {
+  if (e.defaultPrevented || e.isComposing) return false
+  return (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's'
+}
+
+function onKeydown(e: KeyboardEvent): void {
+  if (!isSaveShortcut(e)) return
+  e.preventDefault()
+  saveToBrowser()
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+
 watch(activeTab, async (tab) => {
   await nextTick()
   const panel = tab === 'form' ? formPanelEl.value : reviewPanelEl.value

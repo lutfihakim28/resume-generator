@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
-import { useResumeStore } from '@/composables/useResumeStore'
+import { RESUME_STORAGE_KEY, useResumeStore } from '@/composables/useResumeStore'
 import App from '../App.vue'
 
 /**
@@ -21,9 +21,130 @@ function mountApp() {
   })
 }
 
+/**
+ * Deterministic toast: App (via useSaveToBrowser) calls useToast().add() —
+ * assert on the spy instead of the toast DOM (rendering needs the UApp
+ * provider). Harmless for the existing App tests, which never toast.
+ */
+const { toastAddSpy } = vi.hoisted(() => ({
+  toastAddSpy: vi.fn<(toast: { title: string; color: string }) => void>(),
+}))
+
+vi.mock('@nuxt/ui/composables', () => ({
+  useToast: () => ({ add: toastAddSpy }),
+}))
+
 describe('App', () => {
   beforeEach(() => {
     useResumeStore().resetStore()
+  })
+
+  describe('Ctrl+S hotkey', () => {
+    let wrapper: ReturnType<typeof mountApp>
+
+    beforeEach(() => {
+      toastAddSpy.mockClear()
+      localStorage.clear()
+      wrapper = mountApp()
+    })
+
+    // Mandatory: App registers a window keydown listener in onMounted;
+    // without unmounting, the listener leaks into later tests in this file
+    // and fires on their dispatches. This suite must unmount before the
+    // existing App tests mount (they never unmount and never dispatch keys,
+    // so they stay inert afterwards).
+    afterEach(() => {
+      wrapper.unmount()
+    })
+
+    function dispatchHotkey(init: KeyboardEventInit): KeyboardEvent {
+      const evt = new KeyboardEvent('keydown', init)
+      window.dispatchEvent(evt)
+      return evt
+    }
+
+    it('saves to localStorage and blocks the browser default on Ctrl+S', () => {
+      const store = useResumeStore()
+      store.resume.personal.name = 'Budi Santoso'
+
+      const evt = dispatchHotkey({ key: 's', ctrlKey: true, cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBe(store.exportJson())
+      expect(toastAddSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Resume saved to this browser.', color: 'success' }),
+      )
+      expect(evt.defaultPrevented).toBe(true)
+    })
+
+    it('saves with Cmd+S (macOS parity)', () => {
+      const store = useResumeStore()
+      store.resume.personal.name = 'Siti Rahma'
+
+      const evt = dispatchHotkey({ key: 's', metaKey: true, cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBe(store.exportJson())
+      expect(toastAddSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Resume saved to this browser.', color: 'success' }),
+      )
+      expect(evt.defaultPrevented).toBe(true)
+    })
+
+    it('does not hijack Ctrl+Shift+S (browser Save As…)', () => {
+      const evt = dispatchHotkey({ key: 'S', ctrlKey: true, shiftKey: true, cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+      expect(toastAddSpy).not.toHaveBeenCalled()
+      expect(evt.defaultPrevented).toBe(false)
+    })
+
+    it('does not hijack Ctrl+Alt+S', () => {
+      const evt = dispatchHotkey({ key: 's', ctrlKey: true, altKey: true, cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+      expect(toastAddSpy).not.toHaveBeenCalled()
+      expect(evt.defaultPrevented).toBe(false)
+    })
+
+    it('does nothing for a bare S key', () => {
+      const evt = dispatchHotkey({ key: 's', cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+      expect(toastAddSpy).not.toHaveBeenCalled()
+      expect(evt.defaultPrevented).toBe(false)
+    })
+
+    it('shows the quota error toast and keeps the store intact when saving fails', () => {
+      const store = useResumeStore()
+      store.resume.personal.name = 'Budi Santoso'
+
+      const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('quota', 'QuotaExceededError')
+      })
+      try {
+        dispatchHotkey({ key: 's', ctrlKey: true, cancelable: true })
+      } finally {
+        spy.mockRestore()
+      }
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+      expect(store.resume.personal.name).toBe('Budi Santoso')
+      expect(toastAddSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Save failed: browser storage is full.',
+          color: 'error',
+        }),
+      )
+    })
+
+    it('removes the window listener on unmount', () => {
+      wrapper.unmount()
+      toastAddSpy.mockClear()
+
+      dispatchHotkey({ key: 's', ctrlKey: true, cancelable: true })
+
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+      expect(toastAddSpy).not.toHaveBeenCalled()
+    })
   })
 
   it('mounts renders properly', () => {

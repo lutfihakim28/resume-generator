@@ -2,12 +2,14 @@
 /**
  * Export/import toolbar for the preview panel (README: the preview panel
  * also contains import and export buttons). Talks to the store directly —
- * store.importJson / store.exportJson / store.saveToLocalStorage already hold
- * all the logic; this component adds only file I/O + browser storage + toasts.
+ * store.importJson / store.exportJson already hold the data logic; the save
+ * action comes from the shared useSaveToBrowser (same path as the Ctrl+S
+ * hotkey); this component adds only file I/O + browser storage + toasts.
  * `print:hidden` keeps it out of the future print output.
  */
 import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
+import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
 import { useResumeStore } from '@/composables/useResumeStore'
 import { downloadBlobFile } from '@/utils/download'
 import { buildPdf } from '@/utils/pdf-export'
@@ -16,6 +18,7 @@ import { createBundleZip } from '@/utils/zip'
 
 const store = useResumeStore()
 const toast = useToast()
+const { saveToBrowser } = useSaveToBrowser()
 const fileInput = ref<HTMLInputElement | null>(null)
 
 /** Guard against multi-MB files being read into memory for no reason. */
@@ -77,7 +80,7 @@ async function exportBundle(): Promise<void> {
   }
 }
 
-/** Map the store's distinct error strings to a single actionable toast title. */
+/** Map the store's distinct import-error strings to a single actionable toast title. */
 function importErrorTitle(message: string): string {
   switch (message) {
     case 'Invalid JSON':
@@ -88,28 +91,6 @@ function importErrorTitle(message: string): string {
       return 'Import failed: file is not a resume.json.'
     default:
       return 'Import failed.'
-  }
-}
-
-/** Map the store's distinct save-error strings to a single actionable toast title. */
-function saveErrorTitle(message: string): string {
-  switch (message) {
-    case 'Storage quota exceeded':
-      return 'Save failed: browser storage is full.'
-    case 'Storage unavailable':
-      return 'Save failed: browser storage is not available.'
-    default:
-      return 'Save failed.'
-  }
-}
-
-/** Manual save of the current resume JSON to this browser's localStorage. */
-function saveToBrowser(): void {
-  const result = store.saveToLocalStorage()
-  if (result.ok) {
-    toast.add({ title: 'Resume saved to this browser.', color: 'success' })
-  } else {
-    toast.add({ title: saveErrorTitle(result.errors[0] ?? ''), color: 'error' })
   }
 }
 
