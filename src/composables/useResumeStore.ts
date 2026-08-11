@@ -85,6 +85,29 @@ export function useResumeStore() {
     }
   }
 
+  /**
+   * Restore the resume saved under RESUME_STORAGE_KEY on initial run.
+   * Replace semantics, never merge: clears state first (blank at startup anyway);
+   * activeLang is deliberately not persisted and resets to 'en' via resetStore.
+   * Missing key → silent success (nothing to restore). Invalid/corrupt blob →
+   * ok:false; state is left blank — the startup fallback. Mirrors
+   * saveToLocalStorage's guard + try/catch pattern.
+   */
+  function restoreFromLocalStorage(): ImportResult {
+    if (typeof localStorage === 'undefined') {
+      return { ok: false, errors: ['Storage unavailable'] }
+    }
+    let raw: string | null = null
+    try {
+      raw = localStorage.getItem(RESUME_STORAGE_KEY)
+    } catch {
+      return { ok: false, errors: ['Storage unavailable'] }
+    }
+    if (raw === null) return { ok: true, errors: [] } // nothing saved → no-op
+    resetStore() // true replace: discard any in-flight state before overlaying
+    return importJson(raw)
+  }
+
   function addSkillGroup(): void {
     if (state.resume.skills.length >= MAX_SKILL_GROUPS) return
     state.resume.skills.push({ id: uid(), label: createLangText(), items: createLangText() })
@@ -193,6 +216,7 @@ export function useResumeStore() {
     importJson,
     exportJson,
     saveToLocalStorage,
+    restoreFromLocalStorage,
     addSkillGroup,
     removeSkillGroup,
     addExperience,

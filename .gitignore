@@ -43,3 +43,4 @@ playwright-report/
 
 # Agent bookkeeping (subagent artifacts, missions)
 .pi-subagents/
+.vercel

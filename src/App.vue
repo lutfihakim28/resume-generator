@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
+import { useResumeStore } from '@/composables/useResumeStore'
 import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
 import ResumeFormPanel from '@/components/resume-form/ResumeFormPanel.vue'
 import ResumePreview from '@/components/resume-preview/ResumePreview.vue'
@@ -12,6 +13,16 @@ import ResumePreview from '@/components/resume-preview/ResumePreview.vue'
  * (`:unmount-on-hide="false"`) — so no state is lost on tab switches (the
  * store itself is a module-level singleton anyway).
  */
+
+/**
+ * Restore-on-init: overlay the last saved blob on top of the blank store
+ * before anything (incl. child panels) renders. Silent failure policy: no
+ * toast — a boot-time toast is noise the user can't act on; corrupt blobs
+ * fall back to the blank resume and log to the console only.
+ */
+const { ok: restoreOk, errors: restoreErrors } = useResumeStore().restoreFromLocalStorage()
+if (!restoreOk) console.warn('Resume restore failed:', restoreErrors)
+
 const activeTab = ref<'form' | 'review'>('form')
 const mobileTabs = [
   { label: 'Form', value: 'form', slot: 'form' },

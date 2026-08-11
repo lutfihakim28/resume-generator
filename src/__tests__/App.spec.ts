@@ -37,6 +37,9 @@ vi.mock('@nuxt/ui/composables', () => ({
 describe('App', () => {
   beforeEach(() => {
     useResumeStore().resetStore()
+    // restore-on-mount reads localStorage — without a clear, tests become
+    // order-dependent on leftover keys from earlier tests.
+    localStorage.clear()
   })
 
   describe('Ctrl+S hotkey', () => {
@@ -214,5 +217,61 @@ describe('App', () => {
     await nextTick()
     expect(formPanel.attributes('hidden')).toBeUndefined()
     expect(nameInput().value).toBe('Budi Santoso')
+  })
+
+  describe('restore on mount', () => {
+    beforeEach(() => {
+      toastAddSpy.mockClear()
+    })
+
+    it('restores a saved resume from localStorage on first mount', () => {
+      localStorage.setItem(
+        RESUME_STORAGE_KEY,
+        JSON.stringify({
+          version: 1,
+          personal: { name: 'Seeded Name' },
+          skills: [],
+          experience: [],
+          projects: [],
+          education: [],
+          certifications: [],
+          languages: [],
+        }),
+      )
+
+      mountApp()
+
+      expect(useResumeStore().resume.personal.name).toBe('Seeded Name')
+    })
+
+    it('keeps the blank resume when storage is empty', () => {
+      expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+
+      mountApp()
+
+      expect(useResumeStore().resume.personal.name).toBe('')
+      expect(useResumeStore().resume.skills).toEqual([])
+    })
+
+    it('never shows a toast for a completed restore', () => {
+      localStorage.setItem(
+        RESUME_STORAGE_KEY,
+        JSON.stringify({
+          version: 1,
+          personal: { name: 'Seeded Name' },
+          skills: [],
+          experience: [],
+          projects: [],
+          education: [],
+          certifications: [],
+          languages: [],
+        }),
+      )
+
+      mountApp()
+
+      expect(useResumeStore().resume.personal.name).toBe('Seeded Name')
+      expect(toastAddSpy).not.toHaveBeenCalled()
+    })
   })
 })

@@ -321,3 +321,158 @@ describe('saveToLocalStorage', () => {
     }
   })
 })
+
+describe('restoreFromLocalStorage', () => {
+  beforeEach(() => {
+    useResumeStore().resetStore()
+    localStorage.clear()
+  })
+
+  it('is a silent no-op when nothing is saved', () => {
+    const store = useResumeStore()
+    expect(localStorage.getItem(RESUME_STORAGE_KEY)).toBeNull()
+
+    const result = store.restoreFromLocalStorage()
+
+    expect(result).toEqual({ ok: true, errors: [] })
+    expect(store.resume.personal.name).toBe('')
+    expect(store.resume.skills).toEqual([])
+  })
+
+  it('restores a saved snapshot byte-faithfully including ids', () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Budi Santoso'
+    store.resume.summary.en = 'Backend engineer.'
+    store.addSkillGroup()
+    store.resume.skills[0]!.label.en = 'Languages'
+    store.addExperience()
+    store.resume.experience[0]!.role.en = 'Senior Backend Engineer'
+    const saved = JSON.parse(store.exportJson()) as Resume
+
+    store.saveToLocalStorage()
+    store.resume.personal.name = 'Mutated'
+    useResumeStore().resetStore()
+    expect(useResumeStore().resume.personal.name).toBe('')
+
+    const result = store.restoreFromLocalStorage()
+
+    expect(result).toEqual({ ok: true, errors: [] })
+    expect(useResumeStore().resume).toEqual(saved)
+  })
+
+  it('replaces the store instead of merging with in-flight state', () => {
+    const store = useResumeStore()
+    // Prefill with values that must NOT survive the restore.
+    store.resume.personal.name = 'Base Name'
+    store.resume.personal.phone = '0812-BASE'
+    store.addSkillGroup()
+    store.resume.skills[0]!.label.en = 'Base Skill'
+
+    localStorage.setItem(
+      RESUME_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        personal: { name: 'Seeded Name', phone: '0812-SEED' },
+        skills: [
+          { id: 'seed-skill', label: { en: 'Seed Skill', id: '' }, items: { en: '', id: '' } },
+        ],
+        experience: [],
+        projects: [],
+        education: [],
+        certifications: [],
+        languages: [],
+      }),
+    )
+
+    const result = store.restoreFromLocalStorage()
+
+    expect(result).toEqual({ ok: true, errors: [] })
+    expect(store.resume.personal.name).toBe('Seeded Name')
+    expect(store.resume.personal.phone).toBe('0812-SEED')
+    expect(store.resume.skills).toHaveLength(1)
+    expect(store.resume.skills[0]!.id).toBe('seed-skill')
+    expect(store.resume.skills[0]!.label.en).toBe('Seed Skill')
+    // None of the prefilled base values survive.
+    expect(store.resume.skills.some((g) => g.label.en === 'Base Skill')).toBe(false)
+  })
+
+  it('reports invalid JSON stored under the key', () => {
+    localStorage.setItem(RESUME_STORAGE_KEY, '{not json')
+
+    const result = useResumeStore().restoreFromLocalStorage()
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('Invalid JSON')
+  })
+
+  it('reports an unsupported version stored under the v1 key', () => {
+    localStorage.setItem(
+      RESUME_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        personal: { name: 'X' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: [],
+        certifications: [],
+        languages: [],
+      }),
+    )
+
+    const result = useResumeStore().restoreFromLocalStorage()
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('Unsupported resume.json version')
+  })
+
+  it('reports structurally invalid resume json', () => {
+    localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ version: 1, personal: { name: 42 } }))
+
+    const result = useResumeStore().restoreFromLocalStorage()
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('Invalid resume.json structure')
+  })
+
+  it('reports storage unavailable when localStorage is undefined', () => {
+    const store = useResumeStore()
+    vi.stubGlobal('localStorage', undefined)
+    try {
+      const result = store.restoreFromLocalStorage()
+      expect(result).toEqual({ ok: false, errors: ['Storage unavailable'] })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('reports storage unavailable when getItem throws', () => {
+    const store = useResumeStore()
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    try {
+      const result = store.restoreFromLocalStorage()
+      expect(result).toEqual({ ok: false, errors: ['Storage unavailable'] })
+      expect(spy).toHaveBeenCalledWith(RESUME_STORAGE_KEY)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('restores the resume but keeps activeLang reset to en', () => {
+    const store = useResumeStore()
+    store.resume.personal.name = 'Budi'
+    store.setActiveLang('id')
+
+    store.saveToLocalStorage()
+    useResumeStore().resetStore()
+    expect(useResumeStore().activeLang).toBe('en')
+
+    const result = store.restoreFromLocalStorage()
+
+    expect(result).toEqual({ ok: true, errors: [] })
+    expect(useResumeStore().resume.personal.name).toBe('Budi')
+    expect(useResumeStore().activeLang).toBe('en')
+  })
+})
