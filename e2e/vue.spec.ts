@@ -53,58 +53,47 @@ test('live preview reflects form input in real time', async ({ page }) => {
   )
 })
 
-test('exports a PDF + JSON bundle (EN)', async ({ page }) => {
+test('exports EN + ID PDFs plus JSON in one click', async ({ page }) => {
   await page.goto('/')
   await desktop(page).getByTestId('input-name').fill('Budi Santoso')
   await desktop(page)
     .getByTestId('input-summary')
     .fill('Backend engineer with 4+ years in fintech.')
+  // The same input binds to the active language — switch to ID and fill it.
+  await page.getByRole('tab', { name: 'ID', exact: true }).click()
+  await desktop(page)
+    .getByTestId('input-summary')
+    .fill('Backend engineer dengan 4+ tahun pengalaman di fintech.')
 
   const downloadPromise = page.waitForEvent('download')
   await desktop(page).getByTestId('btn-export-bundle').click()
   const download = await downloadPromise
 
-  expect(download.suggestedFilename()).toBe('resume-budi-santoso-en.zip')
+  expect(download.suggestedFilename()).toBe('resume-budi-santoso-en-id.zip')
   const filePath = await download.path()
   expect(filePath).not.toBeNull()
 
   const zip = await JSZip.loadAsync(readFileSync(filePath!))
 
-  // Inner PDF: real %PDF magic + selectable text (ATS-safe, template §5).
-  const pdfBytes = await zip.file('resume-budi-santoso-en.pdf')!.async('uint8array')
-  expect(Buffer.from(pdfBytes.subarray(0, 4)).toString('latin1')).toBe('%PDF')
-  const text = await extractPdfText(new Uint8Array(pdfBytes))
-  expect(text).toContain('Budi Santoso')
-  expect(text).toContain('Professional Summary')
+  // Both language PDFs: real %PDF magic + selectable text (ATS-safe, template §5).
+  const enPdf = await zip.file('resume-budi-santoso-en.pdf')!.async('uint8array')
+  expect(Buffer.from(enPdf.subarray(0, 4)).toString('latin1')).toBe('%PDF')
+  const enText = await extractPdfText(new Uint8Array(enPdf))
+  expect(enText).toContain('Budi Santoso')
+  expect(enText).toContain('Professional Summary')
+  expect(enText).toContain('Backend engineer with 4+ years in fintech.')
 
-  // Inner JSON: full resume with version + name.
+  const idPdf = await zip.file('resume-budi-santoso-id.pdf')!.async('uint8array')
+  expect(Buffer.from(idPdf.subarray(0, 4)).toString('latin1')).toBe('%PDF')
+  const idText = await extractPdfText(new Uint8Array(idPdf))
+  expect(idText).toContain('Ringkasan Profil')
+  expect(idText).toContain('Backend engineer dengan 4+ tahun pengalaman di fintech.')
+
+  // Inner JSON: full resume with version + name (language-complete, unchanged).
   const jsonEntry = await zip.file('resume-budi-santoso.json')!.async('string')
   const parsed = JSON.parse(jsonEntry)
   expect(parsed.version).toBe(1)
   expect(parsed.personal.name).toBe('Budi Santoso')
-})
-
-test('exports an ID-language bundle when the ID tab is active', async ({ page }) => {
-  await page.goto('/')
-  await desktop(page).getByTestId('input-name').fill('Siti Rahma')
-  await page.getByRole('tab', { name: 'ID', exact: true }).click()
-  await desktop(page)
-    .getByTestId('input-summary')
-    .fill('Frontend engineer dengan 3 tahun pengalaman.')
-
-  const downloadPromise = page.waitForEvent('download')
-  await desktop(page).getByTestId('btn-export-bundle').click()
-  const download = await downloadPromise
-
-  expect(download.suggestedFilename()).toBe('resume-siti-rahma-id.zip')
-  const filePath = await download.path()
-  expect(filePath).not.toBeNull()
-
-  const zip = await JSZip.loadAsync(readFileSync(filePath!))
-  const pdfBytes = await zip.file('resume-siti-rahma-id.pdf')!.async('uint8array')
-  const text = await extractPdfText(new Uint8Array(pdfBytes))
-  expect(text).toContain('Ringkasan Profil')
-  expect(text).toContain('Frontend engineer dengan 3 tahun pengalaman.')
 })
 
 test('imports a resume.json into the form and preview', async ({ page }) => {

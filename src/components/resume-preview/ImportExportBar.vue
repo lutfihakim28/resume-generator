@@ -7,7 +7,7 @@
  * hotkey); this component adds only file I/O + browser storage + toasts.
  * `print:hidden` keeps it out of the future print output.
  */
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
 import { useResumeStore } from '@/composables/useResumeStore'
@@ -15,6 +15,7 @@ import { downloadBlobFile } from '@/utils/download'
 import { buildPdf } from '@/utils/pdf-export'
 import { slugifyName } from '@/utils/resume-utils'
 import { createBundleZip } from '@/utils/zip'
+import type { Lang } from '@/types/resume'
 
 const store = useResumeStore()
 const toast = useToast()
@@ -36,20 +37,22 @@ function exportJsonName(): string {
   return slug ? `resume-${slug}.json` : 'resume.json'
 }
 
-/** Dynamic label makes the export-time language explicit (README: "as user selected"). */
-const exportBundleLabel = computed(() => `Export PDF + JSON (${store.activeLang.toUpperCase()})`)
+/** Both language PDFs are always exported (the bundle is language-complete, like the JSON). */
+const EXPORT_LANGS: Lang[] = ['en', 'id']
 
-/** One action button exports the PDF + JSON as a single ZIP bundle. */
+/** Static label — one action exports both languages, so there is nothing to select. */
+const exportBundleLabel = 'Export EN + ID PDF + JSON'
+
+/** One action exports the EN and ID PDFs + JSON as a single ZIP bundle. */
 async function exportBundle(): Promise<void> {
-  const lang = store.activeLang
   const base = nameBase()
-  const pdfFilename = `${base}${lang}.pdf`
   const jsonFilename = exportJsonName()
-  const zipFilename = `${base}${lang}.zip`
+  const zipFilename = `${base}en-id.zip`
 
-  let result: { data: Uint8Array; truncated: boolean }
+  let results: { lang: Lang; data: Uint8Array; truncated: boolean }[]
   try {
-    result = buildPdf(store.resume, lang)
+    // One jsPDF instance per language — buildPdf must never be shared across langs.
+    results = EXPORT_LANGS.map((lang) => ({ lang, ...buildPdf(store.resume, lang) }))
   } catch {
     toast.add({ title: 'Export failed: could not generate the PDF.', color: 'error' })
     return
@@ -58,7 +61,7 @@ async function exportBundle(): Promise<void> {
   let bundle: Blob
   try {
     bundle = await createBundleZip([
-      { name: pdfFilename, content: result.data },
+      ...results.map(({ lang, data }) => ({ name: `${base}${lang}.pdf`, content: data })),
       { name: jsonFilename, content: store.exportJson() },
     ])
   } catch {
@@ -66,17 +69,23 @@ async function exportBundle(): Promise<void> {
     return
   }
 
-  downloadBlobFile(zipFilename, bundle)
-  if (result.truncated) {
-    toast.add({
-      title: 'Resume is longer than 2 pages — the PDF was truncated.',
-      color: 'warning',
-    })
+  try {
+    downloadBlobFile(zipFilename, bundle)
+  } catch {
+    toast.add({ title: 'Export failed: could not start the download.', color: 'error' })
+    return
+  }
+
+  const truncatedLangs = results.filter((r) => r.truncated).map((r) => r.lang.toUpperCase())
+  if (truncatedLangs.length > 0) {
+    for (const lang of truncatedLangs) {
+      toast.add({
+        title: `Resume is longer than 2 pages — the ${lang} PDF was truncated.`,
+        color: 'warning',
+      })
+    }
   } else {
-    toast.add({
-      title: `Resume exported as PDF + JSON bundle (${lang.toUpperCase()})`,
-      color: 'success',
-    })
+    toast.add({ title: 'Resume exported as EN + ID PDF + JSON bundle', color: 'success' })
   }
 }
 

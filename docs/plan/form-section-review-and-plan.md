@@ -176,3 +176,29 @@ Gotchas fixed during dev:
 - eslint no-unused-vars: `downloadBlobFile`'s `mime` param was redundant (Blob carries type) → dropped from signature
 
 Residual risks: WinAnsi charset (CJK/emoji garble — accepted, template is EN/ID Latin); photo not in PDF v1 (deferred, documented in pdf-export.ts); e2e chromium-only (firefox/webkit not installed); one eyeball font-parity check preview vs PDF recommended (Helvetica ≈ Arial).
+
+---
+
+## Part 7 — Follow-up: DUAL-LANGUAGE PDF+JSON export (2026-08-07)
+
+Chain: reviewer (export-flow review) → oracle (plan) → worker (this part). **Decision: always-both, no mode selector.** The reviewer suggested an export-mode state (EN | ID | Both); the oracle narrowed that to _always export both languages_ — the user's request is "one action → both PDFs", zero new UI state, and the bundle becomes language-complete exactly like the JSON already is (Part 2 decision 2 archived single-language export "PDF is EN _or_ ID (user picks)"; this feature intentionally extends it).
+
+Decisions executed:
+
+- `ImportExportBar.vue` `exportBundle()` now builds BOTH PDFs (`EXPORT_LANGS: Lang[] = ['en', 'id']`, fresh jsPDF per lang) + JSON into one ZIP: `resume-<slug>-en-id.zip` containing `resume-<slug>-en.pdf`, `resume-<slug>-id.pdf`, `resume-<slug>.json` (blank name → `resume-en-id.zip` etc.)
+- Button label static: "Export EN + ID PDF + JSON" (was lang-dynamic `(EN|ID)` — `store.activeLang` no longer read by export; form tabs keep it)
+- Per-language truncation toasts (EN first, ID second — loop order); success toast copy names both languages
+- `downloadBlobFile` moved inside its own try/catch → "could not start the download" error toast (closes reviewer's minor finding: it was outside the handler, proven throwable by `download.spec.ts:76-84`)
+- `buildPdf`, `zip.ts`, `download.ts`, `resume-utils.ts`, store, and `Lang` type UNTOUCHED — the entire feature is one component rewrite + tests + docs
+
+Files:
+
+- mod `src/components/resume-preview/ImportExportBar.vue` — dual export + download try/catch; `computed` import pruned (label is now a plain const)
+- mod `src/__tests__/import-export-bar.spec.ts` — export test reworked to dual (2× buildPdf, 3 files, `-en-id.zip`); blank-name fallback updated; truncated test now per-language (ID-only warn) + new both-truncated ordering test; zip-throw now expects 2× buildPdf; new download-throw test (error toast, no success/warning, zip still created). Net 91 → 93 tests
+- mod `e2e/vue.spec.ts` — EN+ID bundle exported in one click (both PDFs extracted, EN `Professional Summary` + ID `Ringkasan Profil` both asserted); the "ID tab picks export language" test DELETED (premise gone). Net 9 → 8 e2e tests
+- mod `README.md` — feature bullet: "exported in English and Indonesia at once (PDF + JSON bundle)"
+- `src/__tests__/pdf-export.spec.ts` UNCHANGED (API untouched)
+
+Verified: **93/93 unit** (was 91) · `vue-tsc --build` clean · oxlint+eslint clean · chromium e2e **8/8** (was 9, one deleted).
+
+Known debt (carried, not silently fixed): `projectHeight` can split a project entry across pages (atomic-entry contract, cosmetic); blank-page-2 edge; `pages` in `PdfExportResult` is dead surface; `resume-utils` spec gaps. ID PDF sparseness (empty ID fields → sparse-but-valid PDF) stays warn-only per Part 2 decision 6. Download-throw path is unit-covered only (Chromium click always succeeds). e2e chromium-only unchanged.
