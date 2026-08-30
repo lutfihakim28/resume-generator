@@ -89,6 +89,7 @@ function fillResume(resume: Resume): void {
     id: 'l1',
     name: 'Bahasa Indonesia',
     proficiency: { en: 'native', id: 'penutur asli' },
+    visible: true,
   })
 }
 
