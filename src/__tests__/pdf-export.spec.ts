@@ -19,24 +19,27 @@ function fillResume(resume: Resume): void {
   resume.personal.email = 'budi.santoso@email.com'
   resume.personal.city = 'Jakarta, Indonesia'
   resume.personal.github = 'github.com/budisantoso'
-  resume.summary.en =
-    'Software developer with experience building web and mobile applications since 2020. ' +
-    'Started as a frontend developer working with Vue.js, then expanded into mobile development ' +
-    'using Capacitor and Flutter. Alongside professional roles, I have taken freelance work as a ' +
-    'full-stack developer with Next.js, frontend with Vue.js, and backend with Laravel and Node.js. ' +
-    'Most confident building web applications with Vue.js, while staying open to developing ' +
-    'multi-platform apps based on my skills.'
-  resume.summary.id =
-    'Software developer dengan pengalaman membangun aplikasi web dan mobile sejak 2020. ' +
-    'Memulai karier sebagai frontend developer dengan Vue.js, kemudian berkembang ke pengembangan ' +
-    'aplikasi mobile menggunakan Capacitor dan Flutter. Di sela pekerjaan profesional, saya menerima ' +
-    'pekerjaan freelance sebagai fullstack developer dengan Next.js, frontend dengan Vue.js, serta ' +
-    'backend dengan Laravel dan Node.js. Paling percaya diri membangun aplikasi web dengan Vue.js, ' +
-    'namun tetap terbuka mengembangkan aplikasi multi-platform sesuai keahlian.'
+  if (resume.summaries.length > 0) {
+    resume.summaries[0]!.content.en =
+      'Software developer with experience building web and mobile applications since 2020. ' +
+      'Started as a frontend developer working with Vue.js, then expanded into mobile development ' +
+      'using Capacitor and Flutter. Alongside professional roles, I have taken freelance work as a ' +
+      'full-stack developer with Next.js, frontend with Vue.js, and backend with Laravel and Node.js. ' +
+      'Most confident building web applications with Vue.js, while staying open to developing ' +
+      'multi-platform apps based on my skills.'
+    resume.summaries[0]!.content.id =
+      'Software developer dengan pengalaman membangun aplikasi web dan mobile sejak 2020. ' +
+      'Memulai karier sebagai frontend developer dengan Vue.js, kemudian berkembang ke pengembangan ' +
+      'aplikasi mobile menggunakan Capacitor dan Flutter. Di sela pekerjaan profesional, saya menerima ' +
+      'pekerjaan freelance sebagai fullstack developer dengan Next.js, frontend dengan Vue.js, serta ' +
+      'backend dengan Laravel dan Node.js. Paling percaya diri membangun aplikasi web dengan Vue.js, ' +
+      'namun tetap terbuka mengembangkan aplikasi multi-platform sesuai keahlian.'
+  }
   resume.skills.push({
     id: 's1',
     label: { en: 'Languages', id: 'Bahasa' },
     items: { en: 'TypeScript, JavaScript, Go', id: 'TypeScript, JavaScript, Go' },
+    visible: true,
   })
   resume.experience.push({
     id: 'x1',
@@ -53,6 +56,7 @@ function fillResume(resume: Resume): void {
       { en: 'Led migration to 12 microservices.', id: 'Memimpin migrasi ke 12 microservices.' },
     ],
     stack: 'TypeScript, NestJS, PostgreSQL',
+    visible: true,
   })
   resume.projects.push({
     id: 'p1',
@@ -64,6 +68,7 @@ function fillResume(resume: Resume): void {
     },
     stack: 'NestJS, Redis',
     impact: { en: 'Handles 50k requests/day.', id: 'Melayani 50k request/hari.' },
+    visible: true,
   })
   resume.education.push({
     id: 'e1',
@@ -210,6 +215,7 @@ describe('buildPdf', () => {
           id: `Long bullet ${b} tentang optimasi performa, strategi caching, indexing database dan desain API untuk sistem lalu lintas tinggi.`,
         })),
         stack: 'Node.js, PostgreSQL, Redis, AWS',
+        visible: true,
       })
     }
 
@@ -350,6 +356,7 @@ describe('buildPdf', () => {
           { en: 'Led on-call rotation.', id: 'Memimpin rotasi on-call.' },
         ],
         stack: '',
+        visible: true,
       },
     ]
 

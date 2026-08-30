@@ -26,11 +26,18 @@ export interface PersonalInfo {
   photoUrl: string
 }
 
+export interface SummaryEntry {
+  id: string
+  content: LangText
+}
+
 export interface SkillGroup {
   id: string
   label: LangText
   /** Comma-separated skill list — ATS-safe, no bars/tables. */
   items: LangText
+  /** When false the group is hidden from preview / PDF but kept in data. */
+  visible: boolean
 }
 
 export interface ExperienceEntry {
@@ -46,6 +53,8 @@ export interface ExperienceEntry {
   bullets: LangText[]
   /** Comma-separated stack tags used in this role. */
   stack: string
+  /** When false the entry is hidden from preview / PDF but kept in data. */
+  visible: boolean
 }
 
 export interface ProjectEntry {
@@ -55,6 +64,8 @@ export interface ProjectEntry {
   description: LangText
   stack: string
   impact: LangText
+  /** When false the entry is hidden from preview / PDF but kept in data. */
+  visible: boolean
 }
 
 /** Education institution kind — SMA (Indonesian senior high school) or university. */
@@ -82,6 +93,8 @@ export interface LanguageEntry {
   id: string
   name: string
   proficiency: LangText
+  /** When false the entry is hidden from preview / PDF but kept in data. */
+  visible: boolean
 }
 
 export interface ResumeOptions {
@@ -92,7 +105,9 @@ export interface ResumeOptions {
 export interface Resume {
   version: 1
   personal: PersonalInfo
-  summary: LangText
+  summaries: SummaryEntry[]
+  /** Id of the summary that is rendered in preview / PDF (`null` → none). */
+  selectedSummaryId: string | null
   skills: SkillGroup[]
   experience: ExperienceEntry[]
   projects: ProjectEntry[]
@@ -120,7 +135,22 @@ export function createLangText(): LangText {
   return { en: '', id: '' }
 }
 
+export function createSummaryEntry(): SummaryEntry {
+  return { id: uid(), content: createLangText() }
+}
+
+/** Currently selected summary (if any) — used by preview / PDF. */
+export function getSelectedSummary(resume: Resume): SummaryEntry | undefined {
+  if (resume.summaries.length === 0) return undefined
+  if (resume.selectedSummaryId) {
+    const found = resume.summaries.find((s) => s.id === resume.selectedSummaryId)
+    if (found) return found
+  }
+  return resume.summaries[0]
+}
+
 export function createEmptyResume(): Resume {
+  const firstSummary = createSummaryEntry()
   return {
     version: 1,
     personal: {
@@ -134,7 +164,8 @@ export function createEmptyResume(): Resume {
       portfolio: '',
       photoUrl: '',
     },
-    summary: createLangText(),
+    summaries: [firstSummary],
+    selectedSummaryId: firstSummary.id,
     skills: [],
     experience: [],
     projects: [],
@@ -183,6 +214,25 @@ function sanitizeLangTextArray(value: unknown): LangText[] {
   return out
 }
 
+function sanitizeVisible(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : true
+}
+
+function sanitizeSummaryEntry(value: unknown): SummaryEntry | null {
+  if (!value || typeof value !== 'object') return null
+  const o = value as Record<string, unknown>
+  // Legacy single-summary shape is NOT handled here — see mergeResume.
+  // This sanitizer expects the new `{ id, content }` shape.
+  if (!o.content && typeof o.en === 'string') {
+    // Defensive: if someone passes a raw LangText by mistake, wrap it.
+    return { id: keepStr(o.id, uid()), content: sanitizeLangTextOrEmpty(value) }
+  }
+  return {
+    id: keepStr(o.id, uid()),
+    content: sanitizeLangTextOrEmpty(o.content),
+  }
+}
+
 function sanitizeSkillGroup(value: unknown): SkillGroup | null {
   if (!value || typeof value !== 'object') return null
   const o = value as Record<string, unknown>
@@ -190,6 +240,7 @@ function sanitizeSkillGroup(value: unknown): SkillGroup | null {
     id: keepStr(o.id, uid()),
     label: sanitizeLangTextOrEmpty(o.label),
     items: sanitizeLangTextOrEmpty(o.items),
+    visible: sanitizeVisible(o.visible),
   }
 }
 
@@ -205,6 +256,7 @@ function sanitizeExperienceEntry(value: unknown): ExperienceEntry | null {
     end: typeof o.end === 'string' || o.end === null ? o.end : null,
     bullets: sanitizeLangTextArray(o.bullets),
     stack: keepStr(o.stack, ''),
+    visible: sanitizeVisible(o.visible),
   }
 }
 
@@ -218,6 +270,7 @@ function sanitizeProjectEntry(value: unknown): ProjectEntry | null {
     description: sanitizeLangTextOrEmpty(o.description),
     stack: keepStr(o.stack, ''),
     impact: sanitizeLangTextOrEmpty(o.impact),
+    visible: sanitizeVisible(o.visible),
   }
 }
 
@@ -257,6 +310,7 @@ function sanitizeLanguageEntry(value: unknown): LanguageEntry | null {
     id: keepStr(o.id, uid()),
     name: keepStr(o.name, ''),
     proficiency: sanitizeLangTextOrEmpty(o.proficiency),
+    visible: sanitizeVisible(o.visible),
   }
 }
 
@@ -302,7 +356,52 @@ export function mergeResume(base: Resume, raw: unknown): Resume {
     }
   }
 
-  next.summary = sanitizeLangText(r.summary, next.summary)
+  // Summaries: prefer `summaries` array; fall back to legacy `summary: LangText`.
+  if (Array.isArray(r.summaries)) {
+    const sanitized = sanitizeList(r.summaries, sanitizeSummaryEntry)
+    next.summaries = sanitized
+    const rawSelected = typeof r.selectedSummaryId === 'string' ? r.selectedSummaryId : null
+    if (rawSelected && sanitized.some((s) => s.id === rawSelected)) {
+      next.selectedSummaryId = rawSelected
+    } else if (sanitized.length > 0) {
+      next.selectedSummaryId = sanitized[0]!.id
+    } else {
+      next.selectedSummaryId = null
+    }
+  } else if (r.summary && typeof r.summary === 'object') {
+    const legacy = sanitizeLangText(r.summary, createLangText())
+    // Only migrate non-empty legacy summary; otherwise keep base summaries.
+    const hasContent = legacy.en.trim() !== '' || legacy.id.trim() !== ''
+    if (hasContent) {
+      const migrated: SummaryEntry = { id: uid(), content: legacy }
+      next.summaries = [migrated]
+      next.selectedSummaryId = migrated.id
+    } else if (Array.isArray(r.summaries) && r.summaries.length === 0) {
+      next.summaries = []
+      next.selectedSummaryId = null
+    }
+    // If raw has no summaries array and legacy is empty, keep `base` summaries as-is
+    // (preserves in-flight state on partial imports that omit summaries).
+  } else if ('summaries' in r || 'selectedSummaryId' in r) {
+    // Explicit empty / invalid summaries field → clear.
+    if (Array.isArray(r.summaries)) {
+      next.summaries = sanitizeList(r.summaries, sanitizeSummaryEntry)
+      next.selectedSummaryId =
+        typeof r.selectedSummaryId === 'string' &&
+        next.summaries.some((s) => s.id === r.selectedSummaryId)
+          ? (r.selectedSummaryId as string)
+          : (next.summaries[0]?.id ?? null)
+    }
+  }
+  // Ensure selectedSummaryId is still valid after sanitization (e.g. base had stale id).
+  if (
+    next.selectedSummaryId !== null &&
+    !next.summaries.some((s) => s.id === next.selectedSummaryId)
+  ) {
+    next.selectedSummaryId = next.summaries[0]?.id ?? null
+  }
+  if (next.summaries.length === 0) next.selectedSummaryId = null
+
   next.skills = sanitizeList(r.skills, sanitizeSkillGroup)
   next.experience = sanitizeList(r.experience, sanitizeExperienceEntry)
   next.projects = sanitizeList(r.projects, sanitizeProjectEntry)

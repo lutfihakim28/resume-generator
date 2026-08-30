@@ -22,6 +22,7 @@ import type {
   Resume,
   SkillGroup,
 } from '@/types/resume'
+import { getSelectedSummary } from '@/types/resume'
 import { dateRange, educationLine, languageLabel, pickLang, roleLine } from '@/utils/resume-utils'
 
 export interface PdfExportResult {
@@ -181,7 +182,8 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
   }
 
   function drawSummary(): boolean {
-    const text = pickLang(resume.summary, lang)
+    const selected = getSelectedSummary(resume)
+    const text = selected ? pickLang(selected.content, lang) : ''
     if (!text) return true
     const lines = wrap(text, BODY_SIZE)
     if (!beginSection('summary', lines.length * BODY_LH)) return false
@@ -191,7 +193,8 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
 
   function drawSkills(): boolean {
     const groups = resume.skills.filter(
-      (group) => pickLang(group.label, lang) !== '' || pickLang(group.items, lang) !== '',
+      (group) =>
+        group.visible && (pickLang(group.label, lang) !== '' || pickLang(group.items, lang) !== ''),
     )
     if (groups.length === 0) return true
     if (!beginSection('skills', BODY_LH)) return false
@@ -335,7 +338,7 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
 
   function drawProjects(): boolean {
     const projects = resume.projects.filter(
-      (p) => p.name.trim() !== '' || pickLang(p.description, lang) !== '',
+      (p) => p.visible && (p.name.trim() !== '' || pickLang(p.description, lang) !== ''),
     )
     if (projects.length === 0) return true
     if (!beginSection('projects', projectHeight(projects[0]!))) return false
@@ -475,7 +478,7 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
   }
 
   function drawLanguages(): boolean {
-    const entries = resume.languages.filter((l) => l.name.trim() !== '')
+    const entries = resume.languages.filter((l) => l.visible !== false && l.name.trim() !== '')
     if (entries.length === 0) return true
     const line = entries.map((l) => languageLabel(l, lang)).join(' · ')
     const lines = wrap(line, BODY_SIZE)
@@ -485,6 +488,7 @@ export function buildPdf(resume: Resume, lang: Lang): PdfExportResult {
   }
 
   function entryVisible(entry: ExperienceEntry): boolean {
+    if (!entry.visible) return false
     return (
       pickLang(entry.role, lang) !== '' ||
       entry.company.trim() !== '' ||

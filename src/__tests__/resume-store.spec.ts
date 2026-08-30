@@ -14,7 +14,9 @@ describe('useResumeStore', () => {
     expect(store.activeLang).toBe('en')
     expect(store.resume.version).toBe(1)
     expect(store.resume.personal.name).toBe('')
-    expect(store.resume.summary).toEqual({ en: '', id: '' })
+    expect(store.resume.summaries).toHaveLength(1)
+    expect(store.resume.summaries[0]!.content).toEqual({ en: '', id: '' })
+    expect(store.resume.selectedSummaryId).toBe(store.resume.summaries[0]!.id)
     expect(store.resume.skills).toEqual([])
     expect(store.resume.experience).toEqual([])
     expect(store.resume.projects).toEqual([])
@@ -149,8 +151,8 @@ describe('useResumeStore', () => {
   it('round-trips exportJson → importJson', () => {
     const store = useResumeStore()
     store.resume.personal.name = 'Budi Santoso'
-    store.resume.summary.en = 'Backend engineer.'
-    store.resume.summary.id = 'Backend engineer.'
+    store.resume.summaries[0]!.content.en = 'Backend engineer.'
+    store.resume.summaries[0]!.content.id = 'Backend engineer.'
     store.addSkillGroup()
     store.resume.skills[0]!.label.en = 'Languages'
     store.addExperience()
@@ -160,7 +162,10 @@ describe('useResumeStore', () => {
     expect(imported).toEqual({ ok: true, errors: [] })
     const after = useResumeStore()
     expect(after.resume.personal.name).toBe('Budi Santoso')
-    expect(after.resume.summary).toEqual({ en: 'Backend engineer.', id: 'Backend engineer.' })
+    expect(after.resume.summaries[0]!.content).toEqual({
+      en: 'Backend engineer.',
+      id: 'Backend engineer.',
+    })
     expect(after.resume.skills[0]!.label.en).toBe('Languages')
     expect(after.resume.experience[0]!.role.en).toBe('Senior Backend Engineer')
     expect(after.resume.experience[0]!.id).toBe(store.resume.experience[0]!.id)
@@ -269,7 +274,7 @@ describe('saveToLocalStorage', () => {
   it('stores a blob that round-trips through importJson unchanged', () => {
     const store = useResumeStore()
     store.resume.personal.name = 'Budi Santoso'
-    store.resume.summary.en = 'Backend engineer.'
+    store.resume.summaries[0]!.content.en = 'Backend engineer.'
     store.addExperience()
     store.resume.experience[0]!.role.en = 'Senior Backend Engineer'
     const before = JSON.parse(store.exportJson()) as Resume
@@ -342,7 +347,7 @@ describe('restoreFromLocalStorage', () => {
   it('restores a saved snapshot byte-faithfully including ids', () => {
     const store = useResumeStore()
     store.resume.personal.name = 'Budi Santoso'
-    store.resume.summary.en = 'Backend engineer.'
+    store.resume.summaries[0]!.content.en = 'Backend engineer.'
     store.addSkillGroup()
     store.resume.skills[0]!.label.en = 'Languages'
     store.addExperience()

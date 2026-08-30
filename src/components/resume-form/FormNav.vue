@@ -107,7 +107,11 @@ watch(() => store.resume.experience.length, refreshHeadings)
       <span
         v-if="section.incomplete > 0"
         class="size-2 shrink-0 rounded-full bg-amber-400"
-        :title="`${section.incomplete} ID field(s) empty`"
+        :title="
+          store.activeLang === 'id'
+            ? `${section.incomplete} field ID kosong`
+            : `${section.incomplete} ID field(s) empty`
+        "
       />
     </a>
   </nav>

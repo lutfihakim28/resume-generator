@@ -157,7 +157,7 @@ describe('ResumeFormPanel', () => {
 
     // Filling both ID variants clears the alert.
     store.resume.personal.title.id = 'Backend Engineer'
-    store.resume.summary.id = 'Ringkasan'
+    store.resume.summaries[0]!.content.id = 'Ringkasan'
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="incomplete-alert"]').exists()).toBe(false)
   })

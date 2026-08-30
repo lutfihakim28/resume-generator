@@ -40,7 +40,7 @@ export const FORM_SECTIONS: FormSection[] = [
 /** Per-section LangText fields — drives the "ID incomplete" dots. */
 export const SECTION_FIELDS: Record<string, (resume: Resume) => LangText[]> = {
   personal: (r) => [r.personal.title],
-  summary: (r) => [r.summary],
+  summary: (r) => r.summaries.map((s) => s.content),
   skills: (r) => r.skills.flatMap((g) => [g.label, g.items]),
   experience: (r) => r.experience.flatMap((e) => [e.role, ...e.bullets]),
   projects: (r) => r.projects.flatMap((p) => [p.description, p.impact]),

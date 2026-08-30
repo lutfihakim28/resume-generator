@@ -3,6 +3,7 @@ import type { Lang, Resume } from '@/types/resume'
 import {
   createEmptyResume,
   createLangText,
+  createSummaryEntry,
   isValidResumeJson,
   MAX_BULLETS_PER_ROLE,
   MAX_SKILL_GROUPS,
@@ -108,13 +109,43 @@ export function useResumeStore() {
     return importJson(raw)
   }
 
+  function addSummary(): void {
+    const entry = createSummaryEntry()
+    state.resume.summaries.push(entry)
+    // Auto-select the first summary if none selected (e.g. after import of empty list).
+    if (state.resume.selectedSummaryId === null) state.resume.selectedSummaryId = entry.id
+  }
+
+  function removeSummary(id: string): void {
+    state.resume.summaries = state.resume.summaries.filter((s) => s.id !== id)
+    if (state.resume.summaries.length === 0) {
+      state.resume.selectedSummaryId = null
+    } else if (state.resume.selectedSummaryId === id) {
+      state.resume.selectedSummaryId = state.resume.summaries[0]!.id
+    }
+  }
+
+  function selectSummary(id: string): void {
+    if (state.resume.summaries.some((s) => s.id === id)) state.resume.selectedSummaryId = id
+  }
+
   function addSkillGroup(): void {
     if (state.resume.skills.length >= MAX_SKILL_GROUPS) return
-    state.resume.skills.push({ id: uid(), label: createLangText(), items: createLangText() })
+    state.resume.skills.push({
+      id: uid(),
+      label: createLangText(),
+      items: createLangText(),
+      visible: true,
+    })
   }
 
   function removeSkillGroup(id: string): void {
     state.resume.skills = state.resume.skills.filter((g) => g.id !== id)
+  }
+
+  function setSkillVisible(id: string, visible: boolean): void {
+    const g = state.resume.skills.find((s) => s.id === id)
+    if (g) g.visible = visible
   }
 
   function addExperience(): void {
@@ -127,11 +158,17 @@ export function useResumeStore() {
       end: '',
       bullets: [createLangText()],
       stack: '',
+      visible: true,
     })
   }
 
   function removeExperience(id: string): void {
     state.resume.experience = state.resume.experience.filter((e) => e.id !== id)
+  }
+
+  function setExperienceVisible(id: string, visible: boolean): void {
+    const e = state.resume.experience.find((entry) => entry.id === id)
+    if (e) e.visible = visible
   }
 
   function addExperienceBullet(entryId: string): void {
@@ -154,11 +191,17 @@ export function useResumeStore() {
       description: createLangText(),
       stack: '',
       impact: createLangText(),
+      visible: true,
     })
   }
 
   function removeProject(id: string): void {
     state.resume.projects = state.resume.projects.filter((p) => p.id !== id)
+  }
+
+  function setProjectVisible(id: string, visible: boolean): void {
+    const p = state.resume.projects.find((entry) => entry.id === id)
+    if (p) p.visible = visible
   }
 
   function addEducation(): void {
@@ -186,11 +229,16 @@ export function useResumeStore() {
   }
 
   function addLanguage(): void {
-    state.resume.languages.push({ id: uid(), name: '', proficiency: createLangText() })
+    state.resume.languages.push({ id: uid(), name: '', proficiency: createLangText(), visible: true })
   }
 
   function removeLanguage(id: string): void {
     state.resume.languages = state.resume.languages.filter((l) => l.id !== id)
+  }
+
+  function setLanguageVisible(id: string, visible: boolean): void {
+    const l = state.resume.languages.find((entry) => entry.id === id)
+    if (l) l.visible = visible
   }
 
   /** Test/UX reset back to a blank resume (in-place, see importJson). */
@@ -217,20 +265,27 @@ export function useResumeStore() {
     exportJson,
     saveToLocalStorage,
     restoreFromLocalStorage,
+    addSummary,
+    removeSummary,
+    selectSummary,
     addSkillGroup,
     removeSkillGroup,
+    setSkillVisible,
     addExperience,
     removeExperience,
+    setExperienceVisible,
     addExperienceBullet,
     removeExperienceBullet,
     addProject,
     removeProject,
+    setProjectVisible,
     addEducation,
     removeEducation,
     addCertification,
     removeCertification,
     addLanguage,
     removeLanguage,
+    setLanguageVisible,
     resetStore,
   }
 }

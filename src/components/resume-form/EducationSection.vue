@@ -7,6 +7,7 @@ import EducationEntryForm from './EducationEntryForm.vue'
 const store = useResumeStore()
 const section = FORM_SECTIONS.find((s) => s.key === 'education')!
 const heading = computed(() => sectionHeading(section, store.activeLang))
+const lang = computed(() => store.activeLang)
 </script>
 
 <template>
@@ -16,8 +17,11 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
   >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">
-      Positioned at the bottom for mid-level developers; the preset toggle moves it to the top for
-      fresh graduates.
+      {{
+        lang === 'id'
+          ? 'Ditempatkan di bawah untuk developer mid-level; toggle preset memindahkannya ke atas untuk fresh graduate.'
+          : 'Positioned at the bottom for mid-level developers; the preset toggle moves it to the top for fresh graduates.'
+      }}
     </p>
 
     <div class="space-y-4">
@@ -30,7 +34,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
 
     <UButton
       variant="soft"
-      label="Add education"
+      :label="lang === 'id' ? 'Tambah pendidikan' : 'Add education'"
       data-testid="add-education"
       @click="store.addEducation"
     />

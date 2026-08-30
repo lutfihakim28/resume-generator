@@ -37,8 +37,14 @@ const langItems = [
   { label: 'ID', value: 'id' },
 ]
 
+const lang = computed(() => store.activeLang)
 const incompleteCount = computed(() => totalIncompleteCount(store.resume))
-const noContactWarning = computed(() => validateResume(store.resume).warnings.noContact)
+const noContactWarning = computed(() => validateResume(store.resume, lang.value).warnings.noContact)
+const incompleteTitle = computed(() =>
+  lang.value === 'id'
+    ? `${incompleteCount.value} field ID masih kosong — ganti ke ID untuk mengisinya.`
+    : `${incompleteCount.value} ID field(s) still empty — switch to ID to fill them.`,
+)
 </script>
 
 <template>
@@ -64,7 +70,7 @@ const noContactWarning = computed(() => validateResume(store.resume).warnings.no
             size="sm"
             data-testid="sections-toggle"
           >
-            Sections
+            {{ lang === 'id' ? 'Bagian' : 'Sections' }}
           </UButton>
 
           <template #content="{ close }">
@@ -76,7 +82,7 @@ const noContactWarning = computed(() => validateResume(store.resume).warnings.no
       </div>
 
       <div class="flex items-center justify-between gap-4">
-        <h1 class="text-xl font-semibold">Resume Editor</h1>
+        <h1 class="text-xl font-semibold">{{ lang === 'id' ? 'Editor Resume' : 'Resume Editor' }}</h1>
         <UTabs
           v-model="store.activeLang"
           :items="langItems"
@@ -90,7 +96,7 @@ const noContactWarning = computed(() => validateResume(store.resume).warnings.no
         v-if="incompleteCount > 0"
         color="warning"
         variant="soft"
-        :title="`${incompleteCount} ID field(s) still empty — switch to ID to fill them.`"
+        :title="incompleteTitle"
         data-testid="incomplete-alert"
       />
       <UAlert

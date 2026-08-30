@@ -9,10 +9,11 @@ const store = useResumeStore()
 const { removed } = useRemoveNotify()
 const section = FORM_SECTIONS.find((s) => s.key === 'skills')!
 const heading = computed(() => sectionHeading(section, store.activeLang))
+const lang = computed(() => store.activeLang)
 
 function removeSkillGroup(id: string): void {
   store.removeSkillGroup(id)
-  removed('Skill group')
+  removed(lang.value === 'id' ? 'Grup keahlian' : 'Skill group')
 }
 </script>
 
@@ -23,19 +24,36 @@ function removeSkillGroup(id: string): void {
   >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">
-      Comma-separated values, max {{ MAX_SKILL_GROUPS }} groups — ATS-safe (no bars, no tables).
+      {{
+        lang === 'id'
+          ? `Nilai pisah koma, maks ${MAX_SKILL_GROUPS} grup — ATS-safe (tanpa bar/tabel).`
+          : `Comma-separated values, max ${MAX_SKILL_GROUPS} groups — ATS-safe (no bars, no tables).`
+      }}
     </p>
 
     <div
-      v-for="group in store.resume.skills"
+      v-for="(group, index) in store.resume.skills"
       :key="group.id"
       class="space-y-3 rounded-lg border border-gray-200 p-4"
+      :class="{ 'opacity-60': !group.visible }"
       data-testid="skill-group"
     >
-      <UFormField :label="`Group label (${store.activeLang.toUpperCase()})`">
+      <div class="flex items-center justify-between gap-2">
+        <UCheckbox
+          v-model="group.visible"
+          :label="lang === 'id' ? 'Tampilkan di resume' : 'Show in resume'"
+          :data-testid="`skill-visible-${index}`"
+        />
+        <span v-if="!group.visible" class="text-xs text-gray-400">{{
+          lang === 'id' ? 'Disembunyikan dari pratinjau & PDF' : 'Hidden from preview & PDF'
+        }}</span>
+      </div>
+      <UFormField
+        :label="`${lang === 'id' ? 'Label grup' : 'Group label'} (${store.activeLang.toUpperCase()})`"
+      >
         <UInput v-model="group.label[store.activeLang]" placeholder="Languages" />
       </UFormField>
-      <UFormField :label="`Skills (${store.activeLang.toUpperCase()})`">
+      <UFormField :label="`${lang === 'id' ? 'Keahlian' : 'Skills'} (${store.activeLang.toUpperCase()})`">
         <UTextarea
           v-model="group.items[store.activeLang]"
           rows="2"
@@ -46,7 +64,7 @@ function removeSkillGroup(id: string): void {
         variant="ghost"
         color="error"
         size="xs"
-        label="Remove group"
+        :label="lang === 'id' ? 'Hapus grup' : 'Remove group'"
         @click="removeSkillGroup(group.id)"
       />
     </div>
@@ -54,7 +72,7 @@ function removeSkillGroup(id: string): void {
     <UButton
       v-if="store.resume.skills.length < MAX_SKILL_GROUPS"
       variant="soft"
-      label="Add skill group"
+      :label="lang === 'id' ? 'Tambah grup keahlian' : 'Add skill group'"
       data-testid="add-skill-group"
       @click="store.addSkillGroup"
     />

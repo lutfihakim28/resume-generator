@@ -20,12 +20,24 @@ function fillResume(resume: Resume): void {
   resume.personal.city = 'Jakarta, Indonesia'
   resume.personal.github = 'github.com/budisantoso'
   resume.personal.linkedin = 'linkedin.com/in/budisantoso'
-  resume.summary.en = 'Backend engineer with 4+ years building APIs for fintech products.'
-  resume.summary.id = 'Backend engineer dengan 4+ tahun membangun API untuk produk fintech.'
+  if (resume.summaries.length > 0) {
+    resume.summaries[0]!.content.en = 'Backend engineer with 4+ years building APIs for fintech products.'
+    resume.summaries[0]!.content.id = 'Backend engineer dengan 4+ tahun membangun API untuk produk fintech.'
+  } else {
+    resume.summaries.push({
+      id: 's1-summary',
+      content: {
+        en: 'Backend engineer with 4+ years building APIs for fintech products.',
+        id: 'Backend engineer dengan 4+ tahun membangun API untuk produk fintech.',
+      },
+    })
+    resume.selectedSummaryId = resume.summaries[0]!.id
+  }
   resume.skills.push({
     id: 's1',
     label: { en: 'Languages', id: 'Bahasa' },
     items: { en: 'TypeScript, JavaScript, Go', id: 'TypeScript, JavaScript, Go' },
+    visible: true,
   })
   resume.experience.push({
     id: 'x1',
@@ -41,6 +53,7 @@ function fillResume(resume: Resume): void {
       },
     ],
     stack: 'TypeScript, NestJS, PostgreSQL',
+    visible: true,
   })
   resume.projects.push({
     id: 'p1',
@@ -52,6 +65,7 @@ function fillResume(resume: Resume): void {
     },
     stack: 'NestJS, Redis',
     impact: { en: 'Handles 50k requests/day.', id: 'Melayani 50k request/hari.' },
+    visible: true,
   })
   resume.education.push({
     id: 'e1',
@@ -188,7 +202,9 @@ describe('ResumePreview', () => {
     const wrapper = mountPreview()
 
     store.resume.personal.name = 'Siti Rahma'
-    store.resume.summary.en = 'Frontend engineer.'
+    if (store.resume.summaries.length > 0) {
+      store.resume.summaries[0]!.content.en = 'Frontend engineer.'
+    }
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="preview-empty"]').exists()).toBe(false)

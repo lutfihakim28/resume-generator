@@ -7,6 +7,7 @@ import LanguageEntryForm from './LanguageEntryForm.vue'
 const store = useResumeStore()
 const section = FORM_SECTIONS.find((s) => s.key === 'languages')!
 const heading = computed(() => sectionHeading(section, store.activeLang))
+const lang = computed(() => store.activeLang)
 </script>
 
 <template>
@@ -26,7 +27,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
 
     <UButton
       variant="soft"
-      label="Add language"
+      :label="lang === 'id' ? 'Tambah bahasa' : 'Add language'"
       data-testid="add-language"
       @click="store.addLanguage"
     />

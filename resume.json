@@ -14,10 +14,16 @@
     "portfolio": "",
     "photoUrl": ""
   },
-  "summary": {
-    "en": "Software developer with experience building web and mobile applications since 2020. Started as a frontend developer working with Vue.js, then expanded into mobile development using Capacitor and Flutter. Alongside professional roles, I have taken freelance work as a full-stack developer with Next.js, frontend with Vue.js, and backend with Laravel and Node.js. Most confident building web applications with Vue.js, while staying open to developing multi-platform apps based on my skills.",
-    "id": "Software developer dengan pengalaman membangun aplikasi web dan mobile sejak 2020. Memulai karier sebagai frontend developer dengan Vue.js, kemudian berkembang ke pengembangan aplikasi mobile menggunakan Capacitor dan Flutter. Di sela pekerjaan profesional, saya menerima pekerjaan freelance sebagai fullstack developer dengan Next.js, frontend dengan Vue.js, serta backend dengan Laravel dan Node.js. Paling percaya diri membangun aplikasi web dengan Vue.js, namun tetap terbuka mengembangkan aplikasi multi-platform sesuai keahlian."
-  },
+  "summaries": [
+    {
+      "id": "sum-1",
+      "content": {
+        "en": "Software developer with experience building web and mobile applications since 2020. Started as a frontend developer working with Vue.js, then expanded into mobile development using Capacitor and Flutter. Alongside professional roles, I have taken freelance work as a full-stack developer with Next.js, frontend with Vue.js, and backend with Laravel and Node.js. Most confident building web applications with Vue.js, while staying open to developing multi-platform apps based on my skills.",
+        "id": "Software developer dengan pengalaman membangun aplikasi web dan mobile sejak 2020. Memulai karier sebagai frontend developer dengan Vue.js, kemudian berkembang ke pengembangan aplikasi mobile menggunakan Capacitor dan Flutter. Di sela pekerjaan profesional, saya menerima pekerjaan freelance sebagai fullstack developer dengan Next.js, frontend dengan Vue.js, serta backend dengan Laravel dan Node.js. Paling percaya diri membangun aplikasi web dengan Vue.js, namun tetap terbuka mengembangkan aplikasi multi-platform sesuai keahlian."
+      }
+    }
+  ],
+  "selectedSummaryId": "sum-1",
   "skills": [
     {
       "id": "sk-1",
@@ -28,7 +34,8 @@
       "items": {
         "en": "Vue.js, Svelte, Next.js, Nuxt.js, HTML, CSS, Tailwind CSS",
         "id": "Vue.js, Svelte, Next.js, Nuxt.js, HTML, CSS, Tailwind CSS"
-      }
+      },
+      "visible": true
     },
     {
       "id": "sk-2",
@@ -39,7 +46,8 @@
       "items": {
         "en": "Laravel, Node.js, Express.js",
         "id": "Laravel, Node.js, Express.js"
-      }
+      },
+      "visible": true
     },
     {
       "id": "sk-3",
@@ -50,7 +58,8 @@
       "items": {
         "en": "Flutter, Capacitor, Android",
         "id": "Flutter, Capacitor, Android"
-      }
+      },
+      "visible": true
     },
     {
       "id": "sk-4",
@@ -61,7 +70,8 @@
       "items": {
         "en": "JavaScript, TypeScript, PHP, SQL, Dart",
         "id": "JavaScript, TypeScript, PHP, SQL, Dart"
-      }
+      },
+      "visible": true
     }
   ],
   "experience": [
@@ -89,7 +99,8 @@
           "id": "Berkontribusi pada aplikasi online store untuk klien koleksi mainan, menangani purchasing order di sisi admin dan keranjang belanja di sisi end user."
         }
       ],
-      "stack": "Vue.js, Nuxt.js, Vuetify, Laravel, Inertia.js"
+      "stack": "Vue.js, Nuxt.js, Vuetify, Laravel, Inertia.js",
+      "visible": true
     },
     {
       "id": "exp-2",
@@ -107,7 +118,8 @@
           "id": "Memelihara aplikasi dashboard admin untuk berbagai aplikasi end user."
         }
       ],
-      "stack": "Vue.js"
+      "stack": "Vue.js",
+      "visible": true
     },
     {
       "id": "exp-3",
@@ -133,7 +145,8 @@
           "id": "Bagian dari tim pengembangan aplikasi POS untuk beberapa segmen — F&B, retail, dan salon — menggunakan Flutter."
         }
       ],
-      "stack": "Svelte, Capacitor, Flutter"
+      "stack": "Svelte, Capacitor, Flutter",
+      "visible": true
     },
     {
       "id": "exp-4",
@@ -151,7 +164,8 @@
           "id": "Bagian dari tim pengembangan frontend aplikasi catering dan dating."
         }
       ],
-      "stack": "Vue.js"
+      "stack": "Vue.js",
+      "visible": true
     },
     {
       "id": "exp-5",
@@ -169,7 +183,8 @@
           "id": "Membangun API yang digunakan developer Flutter dan React untuk aplikasi distribusi teh kemasan."
         }
       ],
-      "stack": "Laravel"
+      "stack": "Laravel",
+      "visible": true
     },
     {
       "id": "exp-6",
@@ -187,7 +202,8 @@
           "id": "Mengembangkan fitur transaksi end-to-end untuk aplikasi pencatatan tiket penyedia jasa tiketing."
         }
       ],
-      "stack": "Next.js"
+      "stack": "Next.js",
+      "visible": true
     }
   ],
   "projects": [
@@ -203,7 +219,8 @@
       "impact": {
         "en": "Currently being rewritten as an offline-first Flutter app — a self-driven project to deepen Flutter expertise and financial data modeling.",
         "id": "Sedang ditulis ulang sebagai aplikasi offline-first dengan Flutter — proyek mandiri untuk memperdalam keahlian Flutter dan pemodelan data keuangan."
-      }
+      },
+      "visible": true
     }
   ],
   "education": [
@@ -231,7 +248,8 @@
       "proficiency": {
         "en": "Native",
         "id": "Asli"
-      }
+      },
+      "visible": true
     },
     {
       "id": "lang-2",
@@ -239,7 +257,8 @@
       "proficiency": {
         "en": "Intermediate",
         "id": "Menengah"
-      }
+      },
+      "visible": true
     }
   ],
   "options": {

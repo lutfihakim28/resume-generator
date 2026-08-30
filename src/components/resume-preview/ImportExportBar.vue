@@ -7,7 +7,7 @@
  * hotkey); this component adds only file I/O + browser storage + toasts.
  * `print:hidden` keeps it out of the future print output.
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
 import { useResumeStore } from '@/composables/useResumeStore'
@@ -21,6 +21,7 @@ const store = useResumeStore()
 const toast = useToast()
 const { saveToBrowser } = useSaveToBrowser()
 const fileInput = ref<HTMLInputElement | null>(null)
+const lang = computed(() => store.activeLang)
 
 /** Guard against multi-MB files being read into memory for no reason. */
 const MAX_IMPORT_BYTES = 1_000_000
@@ -40,8 +41,12 @@ function exportJsonName(): string {
 /** Both language PDFs are always exported (the bundle is language-complete, like the JSON). */
 const EXPORT_LANGS: Lang[] = ['en', 'id']
 
-/** Static label — one action exports both languages, so there is nothing to select. */
-const exportBundleLabel = 'Export EN + ID PDF + JSON'
+/** One action exports both languages, so there is nothing to select — label follows activeLang. */
+const exportBundleLabel = computed(() =>
+  lang.value === 'id' ? 'Ekspor PDF EN+ID + JSON' : 'Export EN + ID PDF + JSON',
+)
+const importLabel = computed(() => (lang.value === 'id' ? 'Impor JSON' : 'Import JSON'))
+const saveLabel = computed(() => (lang.value === 'id' ? 'Simpan ke Browser' : 'Save to Browser'))
 
 /** One action exports the EN and ID PDFs + JSON as a single ZIP bundle. */
 async function exportBundle(): Promise<void> {
@@ -52,54 +57,76 @@ async function exportBundle(): Promise<void> {
   let results: { lang: Lang; data: Uint8Array; truncated: boolean }[]
   try {
     // One jsPDF instance per language — buildPdf must never be shared across langs.
-    results = EXPORT_LANGS.map((lang) => ({ lang, ...buildPdf(store.resume, lang) }))
+    results = EXPORT_LANGS.map((l) => ({ lang: l, ...buildPdf(store.resume, l) }))
   } catch {
-    toast.add({ title: 'Export failed: could not generate the PDF.', color: 'error' })
+    toast.add({
+      title:
+        lang.value === 'id' ? 'Ekspor gagal: tidak bisa membuat PDF.' : 'Export failed: could not generate the PDF.',
+      color: 'error',
+    })
     return
   }
 
   let bundle: Blob
   try {
     bundle = await createBundleZip([
-      ...results.map(({ lang, data }) => ({ name: `${base}${lang}.pdf`, content: data })),
+      ...results.map(({ lang: l, data }) => ({ name: `${base}${l}.pdf`, content: data })),
       { name: jsonFilename, content: store.exportJson() },
     ])
   } catch {
-    toast.add({ title: 'Export failed: could not create the bundle.', color: 'error' })
+    toast.add({
+      title:
+        lang.value === 'id' ? 'Ekspor gagal: tidak bisa membuat bundle.' : 'Export failed: could not create the bundle.',
+      color: 'error',
+    })
     return
   }
 
   try {
     downloadBlobFile(zipFilename, bundle)
   } catch {
-    toast.add({ title: 'Export failed: could not start the download.', color: 'error' })
+    toast.add({
+      title:
+        lang.value === 'id' ? 'Ekspor gagal: tidak bisa memulai unduhan.' : 'Export failed: could not start the download.',
+      color: 'error',
+    })
     return
   }
 
   const truncatedLangs = results.filter((r) => r.truncated).map((r) => r.lang.toUpperCase())
   if (truncatedLangs.length > 0) {
-    for (const lang of truncatedLangs) {
+    for (const l of truncatedLangs) {
       toast.add({
-        title: `Resume is longer than 2 pages — the ${lang} PDF was truncated.`,
+        title:
+          lang.value === 'id'
+            ? `Resume lebih dari 2 halaman — PDF ${l} terpotong.`
+            : `Resume is longer than 2 pages — the ${l} PDF was truncated.`,
         color: 'warning',
       })
     }
   } else {
-    toast.add({ title: 'Resume exported as EN + ID PDF + JSON bundle', color: 'success' })
+    toast.add({
+      title:
+        lang.value === 'id'
+          ? 'Resume diekspor sebagai bundle PDF EN+ID + JSON'
+          : 'Resume exported as EN + ID PDF + JSON bundle',
+      color: 'success',
+    })
   }
 }
 
 /** Map the store's distinct import-error strings to a single actionable toast title. */
 function importErrorTitle(message: string): string {
+  const isId = lang.value === 'id'
   switch (message) {
     case 'Invalid JSON':
-      return 'Import failed: file is not valid JSON.'
+      return isId ? 'Impor gagal: file bukan JSON yang valid.' : 'Import failed: file is not valid JSON.'
     case 'Unsupported resume.json version':
-      return 'Import failed: unsupported resume.json version.'
+      return isId ? 'Impor gagal: versi resume.json tidak didukung.' : 'Import failed: unsupported resume.json version.'
     case 'Invalid resume.json structure':
-      return 'Import failed: file is not a resume.json.'
+      return isId ? 'Impor gagal: file bukan resume.json.' : 'Import failed: file is not a resume.json.'
     default:
-      return 'Import failed.'
+      return isId ? 'Impor gagal.' : 'Import failed.'
   }
 }
 
@@ -109,7 +136,10 @@ function onFileChange(event: Event): void {
   if (!file) return
 
   if (file.size > MAX_IMPORT_BYTES) {
-    toast.add({ title: 'Import failed: file is larger than 1 MB.', color: 'error' })
+    toast.add({
+      title: lang.value === 'id' ? 'Impor gagal: file lebih besar dari 1 MB.' : 'Import failed: file is larger than 1 MB.',
+      color: 'error',
+    })
     input.value = ''
     return
   }
@@ -119,7 +149,10 @@ function onFileChange(event: Event): void {
     const text = typeof reader.result === 'string' ? reader.result : ''
     const result = store.importJson(text)
     if (result.ok) {
-      toast.add({ title: 'Resume imported — ready to edit.', color: 'success' })
+      toast.add({
+        title: lang.value === 'id' ? 'Resume diimpor — siap diedit.' : 'Resume imported — ready to edit.',
+        color: 'success',
+      })
     } else {
       toast.add({ title: importErrorTitle(result.errors[0] ?? ''), color: 'error' })
     }
@@ -127,7 +160,10 @@ function onFileChange(event: Event): void {
     input.value = ''
   }
   reader.onerror = () => {
-    toast.add({ title: 'Import failed: could not read the file.', color: 'error' })
+    toast.add({
+      title: lang.value === 'id' ? 'Impor gagal: tidak bisa membaca file.' : 'Import failed: could not read the file.',
+      color: 'error',
+    })
     input.value = ''
   }
   reader.readAsText(file)
@@ -144,13 +180,13 @@ function onFileChange(event: Event): void {
     />
     <UButton
       variant="soft"
-      label="Import JSON"
+      :label="importLabel"
       data-testid="btn-import-json"
       @click="fileInput?.click()"
     />
     <UButton
       variant="soft"
-      label="Save to Browser"
+      :label="saveLabel"
       data-testid="btn-save-local"
       @click="saveToBrowser"
     />

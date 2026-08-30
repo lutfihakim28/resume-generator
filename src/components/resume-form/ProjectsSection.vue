@@ -7,6 +7,7 @@ import ProjectEntryForm from './ProjectEntryForm.vue'
 const store = useResumeStore()
 const section = FORM_SECTIONS.find((s) => s.key === 'projects')!
 const heading = computed(() => sectionHeading(section, store.activeLang))
+const lang = computed(() => store.activeLang)
 </script>
 
 <template>
@@ -16,7 +17,11 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
   >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">
-      2–3 items. This is the fresh-grad equalizer — keep it even if short.
+      {{
+        lang === 'id'
+          ? '2–3 item. Ini penyeimbang untuk fresh graduate — tetap tampilkan walau singkat.'
+          : '2–3 items. This is the fresh-grad equalizer — keep it even if short.'
+      }}
     </p>
 
     <div class="space-y-4">
@@ -29,7 +34,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
 
     <UButton
       variant="soft"
-      label="Add project"
+      :label="lang === 'id' ? 'Tambah proyek' : 'Add project'"
       data-testid="add-project"
       @click="store.addProject"
     />

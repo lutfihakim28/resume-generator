@@ -16,6 +16,7 @@ import {
   roleLine,
 } from '@/utils/resume-utils'
 import { FORM_SECTIONS } from '@/components/resume-form/sections'
+import { getSelectedSummary } from '@/types/resume'
 import type { ExperienceEntry, LangText } from '@/types/resume'
 import ImportExportBar from './ImportExportBar.vue'
 import PreviewSection from './PreviewSection.vue'
@@ -65,13 +66,20 @@ const photoSrc = computed(() => {
 // Sections — only rendered when the active language has real content
 // ---------------------------------------------------------------------------
 
-const summary = computed(() => lt(resume.value.summary))
+const summary = computed(() => {
+  const selected = getSelectedSummary(resume.value)
+  return selected ? lt(selected.content) : ''
+})
 const skills = computed(() =>
-  resume.value.skills.filter((group) => lt(group.label) !== '' || lt(group.items) !== ''),
+  resume.value.skills.filter(
+    (group) => group.visible && (lt(group.label) !== '' || lt(group.items) !== ''),
+  ),
 )
 const experience = computed(() => resume.value.experience.filter(entryVisible))
 const projects = computed(() =>
-  resume.value.projects.filter((p) => p.name.trim() !== '' || lt(p.description) !== ''),
+  resume.value.projects.filter(
+    (p) => p.visible && (p.name.trim() !== '' || lt(p.description) !== ''),
+  ),
 )
 const education = computed(() =>
   resume.value.education.filter((e) => lt(e.degree) !== '' || e.institution.trim() !== ''),
@@ -79,9 +87,12 @@ const education = computed(() =>
 const certifications = computed(() =>
   resume.value.certifications.filter((c) => c.name.trim() !== ''),
 )
-const languages = computed(() => resume.value.languages.filter((l) => l.name.trim() !== ''))
+const languages = computed(() =>
+  resume.value.languages.filter((l) => l.visible !== false && l.name.trim() !== ''),
+)
 
 function entryVisible(entry: ExperienceEntry): boolean {
+  if (!entry.visible) return false
   return (
     lt(entry.role) !== '' ||
     entry.company.trim() !== '' ||
@@ -93,9 +104,11 @@ function entryVisible(entry: ExperienceEntry): boolean {
 
 const isEmpty = computed(() => {
   const r = resume.value
+  const selected = getSelectedSummary(r)
+  const summaryText = selected ? lt(selected.content) : ''
   return (
     r.personal.name.trim() === '' &&
-    lt(r.summary) === '' &&
+    summaryText === '' &&
     r.skills.length === 0 &&
     r.experience.length === 0 &&
     r.projects.length === 0 &&
@@ -118,9 +131,15 @@ const educationTop = computed(() => resume.value.options.educationPosition === '
         class="flex h-[297mm] flex-col items-center justify-center gap-2 p-14 text-center"
         data-testid="preview-empty"
       >
-        <p class="text-[14pt] text-gray-400">Your resume preview</p>
+        <p class="text-[14pt] text-gray-400">
+          {{ lang === 'id' ? 'Pratinjau resume Anda' : 'Your resume preview' }}
+        </p>
         <p class="text-[10.5pt] text-gray-300">
-          Fill the form on the left — the preview updates in real time.
+          {{
+            lang === 'id'
+              ? 'Isi formulir di sebelah kiri — pratinjau akan diperbarui secara real-time.'
+              : 'Fill the form on the left — the preview updates in real time.'
+          }}
         </p>
       </div>
 
@@ -137,7 +156,7 @@ const educationTop = computed(() => resume.value.options.educationPosition === '
           <img
             v-if="photoSrc"
             :src="photoSrc"
-            alt="Profile photo"
+            :alt="lang === 'id' ? 'Foto profil' : 'Profile photo'"
             class="h-[36mm] w-[28mm] shrink-0 object-cover"
             data-testid="preview-photo"
           />

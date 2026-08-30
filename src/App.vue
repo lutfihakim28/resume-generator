@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useResumeStore } from '@/composables/useResumeStore'
 import { useSaveToBrowser } from '@/composables/useSaveToBrowser'
@@ -24,10 +24,11 @@ const { ok: restoreOk, errors: restoreErrors } = useResumeStore().restoreFromLoc
 if (!restoreOk) console.warn('Resume restore failed:', restoreErrors)
 
 const activeTab = ref<'form' | 'review'>('form')
-const mobileTabs = [
-  { label: 'Form', value: 'form', slot: 'form' },
-  { label: 'Review', value: 'review', slot: 'review' },
-]
+const store = useResumeStore()
+const mobileTabs = computed(() => [
+  { label: store.activeLang === 'id' ? 'Formulir' : 'Form', value: 'form', slot: 'form' },
+  { label: store.activeLang === 'id' ? 'Pratinjau' : 'Review', value: 'review', slot: 'review' },
+])
 const formPanelEl = ref<ComponentPublicInstance | null>(null)
 const reviewPanelEl = ref<ComponentPublicInstance | null>(null)
 

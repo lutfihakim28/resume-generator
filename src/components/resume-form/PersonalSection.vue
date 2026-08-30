@@ -8,8 +8,9 @@ import { FORM_SECTIONS } from './sections'
 const store = useResumeStore()
 const section = FORM_SECTIONS.find((s) => s.key === 'personal')!
 
-const errors = computed(() => validateResume(store.resume).errors)
-const emailWarning = computed(() => validateResume(store.resume).warnings.email)
+const lang = computed(() => store.activeLang)
+const errors = computed(() => validateResume(store.resume, lang.value).errors)
+const emailWarning = computed(() => validateResume(store.resume, lang.value).warnings.email)
 const heading = computed(() => sectionHeading(section, store.activeLang))
 </script>
 
@@ -20,7 +21,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
   >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
 
-    <UFormField label="Name" :error="errors.name" required>
+    <UFormField :label="lang === 'id' ? 'Nama' : 'Name'" :error="errors.name" required>
       <UInput
         v-model="store.resume.personal.name"
         placeholder="Budi Santoso"
@@ -28,7 +29,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
       />
     </UFormField>
 
-    <UFormField :label="`Title (${store.activeLang.toUpperCase()})`">
+    <UFormField :label="`${lang === 'id' ? 'Jabatan' : 'Title'} (${store.activeLang.toUpperCase()})`">
       <UInput
         v-model="store.resume.personal.title[store.activeLang]"
         placeholder="Backend Software Engineer · Node.js · TypeScript"
@@ -37,7 +38,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
     </UFormField>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <UFormField label="Phone">
+      <UFormField :label="lang === 'id' ? 'Telepon' : 'Phone'">
         <UInput
           v-model="store.resume.personal.phone"
           placeholder="+62 812-XXXX-XXXX"
@@ -54,7 +55,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
       </UFormField>
     </div>
 
-    <UFormField label="City">
+    <UFormField :label="lang === 'id' ? 'Kota' : 'City'">
       <UInput
         v-model="store.resume.personal.city"
         placeholder="Jakarta, Indonesia"
@@ -63,28 +64,28 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
     </UFormField>
 
     <div class="grid grid-cols-1 gap-4">
-      <UFormField v-if="store.resume.options.showPhoto" label="Photo URL (optional)">
+      <UFormField v-if="store.resume.options.showPhoto" :label="lang === 'id' ? 'URL Foto (opsional)' : 'Photo URL (optional)'">
         <UInput
           v-model="store.resume.personal.photoUrl"
           placeholder="https://example.com/photo.jpg"
           data-testid="input-photo-url"
         />
       </UFormField>
-      <UFormField label="GitHub (optional)">
+      <UFormField :label="lang === 'id' ? 'GitHub (opsional)' : 'GitHub (optional)'">
         <UInput
           v-model="store.resume.personal.github"
           placeholder="github.com/budisantoso"
           data-testid="input-github"
         />
       </UFormField>
-      <UFormField label="LinkedIn (optional)">
+      <UFormField :label="lang === 'id' ? 'LinkedIn (opsional)' : 'LinkedIn (optional)'">
         <UInput
           v-model="store.resume.personal.linkedin"
           placeholder="linkedin.com/in/budisantoso"
           data-testid="input-linkedin"
         />
       </UFormField>
-      <UFormField label="Portfolio (optional)">
+      <UFormField :label="lang === 'id' ? 'Portofolio (opsional)' : 'Portfolio (optional)'">
         <UInput
           v-model="store.resume.personal.portfolio"
           placeholder="https://budisantoso.dev"

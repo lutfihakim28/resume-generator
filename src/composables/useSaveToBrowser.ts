@@ -2,14 +2,15 @@ import { useToast } from '@nuxt/ui/composables'
 import { useResumeStore } from '@/composables/useResumeStore'
 
 /** Map the store's distinct save-error strings to a single actionable toast title. */
-function saveErrorTitle(message: string): string {
+function saveErrorTitle(message: string, lang: string): string {
+  const isId = lang === 'id'
   switch (message) {
     case 'Storage quota exceeded':
-      return 'Save failed: browser storage is full.'
+      return isId ? 'Gagal menyimpan: penyimpanan browser penuh.' : 'Save failed: browser storage is full.'
     case 'Storage unavailable':
-      return 'Save failed: browser storage is not available.'
+      return isId ? 'Gagal menyimpan: penyimpanan browser tidak tersedia.' : 'Save failed: browser storage is not available.'
     default:
-      return 'Save failed.'
+      return isId ? 'Gagal menyimpan.' : 'Save failed.'
   }
 }
 
@@ -24,10 +25,14 @@ export function useSaveToBrowser() {
   return {
     saveToBrowser(): void {
       const result = store.saveToLocalStorage()
+      const isId = store.activeLang === 'id'
       if (result.ok) {
-        toast.add({ title: 'Resume saved to this browser.', color: 'success' })
+        toast.add({
+          title: isId ? 'Resume disimpan ke browser ini.' : 'Resume saved to this browser.',
+          color: 'success',
+        })
       } else {
-        toast.add({ title: saveErrorTitle(result.errors[0] ?? ''), color: 'error' })
+        toast.add({ title: saveErrorTitle(result.errors[0] ?? '', store.activeLang), color: 'error' })
       }
     },
   }

@@ -7,6 +7,7 @@ import ExperienceEntryForm from './ExperienceEntryForm.vue'
 const store = useResumeStore()
 const section = FORM_SECTIONS.find((s) => s.key === 'experience')!
 const heading = computed(() => sectionHeading(section, store.activeLang))
+const lang = computed(() => store.activeLang)
 </script>
 
 <template>
@@ -16,7 +17,11 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
   >
     <h2 class="text-lg font-semibold">{{ heading }}</h2>
     <p class="text-sm text-gray-500">
-      Newest first. 3–5 bullets per role, each with a strong verb + metric.
+      {{
+        lang === 'id'
+          ? 'Terbaru di atas. 3–5 poin per peran, tiap poin pakai kata kerja kuat + metrik.'
+          : 'Newest first. 3–5 bullets per role, each with a strong verb + metric.'
+      }}
     </p>
 
     <div class="space-y-4">
@@ -29,7 +34,7 @@ const heading = computed(() => sectionHeading(section, store.activeLang))
 
     <UButton
       variant="soft"
-      label="Add experience"
+      :label="lang === 'id' ? 'Tambah pengalaman' : 'Add experience'"
       data-testid="add-experience"
       @click="store.addExperience"
     />
