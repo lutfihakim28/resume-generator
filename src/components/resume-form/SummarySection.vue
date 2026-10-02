@@ -42,8 +42,8 @@ function removeSummary(id: string): void {
       :class="{ 'border-blue-300 bg-blue-50/30 hover:border-blue-300': store.resume.selectedSummaryId === summary.id }"
       data-testid="summary-entry"
       @click="store.selectSummary(summary.id)"
-      @keydown.enter.prevent="store.selectSummary(summary.id)"
-      @keydown.space.prevent="store.selectSummary(summary.id)"
+      @keydown.enter.self.prevent="store.selectSummary(summary.id)"
+      @keydown.space.self.prevent="store.selectSummary(summary.id)"
     >
       <div class="flex items-center justify-between gap-2">
         <div class="flex cursor-pointer items-center gap-2 text-sm font-medium">

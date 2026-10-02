@@ -162,6 +162,27 @@ describe('ResumeFormPanel', () => {
     expect(wrapper.find('[data-testid="incomplete-alert"]').exists()).toBe(false)
   })
 
+  it('space and Enter stay typeable inside a summary card, but still select the card itself', async () => {
+    const wrapper = mountPanel()
+    const textarea = wrapper.find<HTMLTextAreaElement>('[data-testid="input-summary"]')
+    const card = wrapper.find<HTMLElement>('[data-testid="summary-entry"]')
+
+    // Keystrokes originating in the textarea must not be swallowed by the card
+    // handler (`@keydown.space.self`), or spaces/newlines can never be typed.
+    for (const key of [' ', 'Enter']) {
+      const evt = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      expect(textarea.element.dispatchEvent(evt)).toBe(true)
+    }
+
+    // The card itself keeps its keyboard activation (a11y).
+    const store = useResumeStore()
+    store.resume.selectedSummaryId = ''
+    const evt = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
+    card.element.dispatchEvent(evt)
+    expect(evt.defaultPrevented).toBe(true)
+    expect(store.resume.selectedSummaryId).toBe(store.resume.summaries[0]!.id)
+  })
+
   it('contact warning appears when phone and email are both empty', async () => {
     const wrapper = mountPanel()
     const store = useResumeStore()
